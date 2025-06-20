@@ -8,10 +8,11 @@ services:
     environment:
       APP_ADDR: :8080
       DB_USER: root
-      DB_PASS: pass
+      DB_PASS: ${MYSQL_PASSWORD}
       DB_HOST: db
       DB_PORT: "3306"
       DB_NAME: app
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -24,12 +25,22 @@ services:
     image: mysql:latest
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: app
     expose:
       - "3306"
     healthcheck:
-      test: mysql --user=root --password=pass --execute "SHOW DATABASES;"
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$MYSQL_PASSWORD",
+        ]
       interval: 1s
       timeout: 10s
       retries: 30
@@ -51,7 +62,9 @@ services:
       - bootstrap.memory_lock=true
       - logger.deprecation.level=debug
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - "network.host=0.0.0.0"
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     ulimits:
       memlock:
         soft: -1
@@ -68,6 +81,27 @@ services:
     restart: always
     environment:
       - "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.0.2
+    container_name: setup
+    user: "0"
+    command: >
+      bash -c '
+        if [ x${ELASTIC_PASSWORD} == x ]; then
+          echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+          exit 1;
+        elif [ x${KIBANA_PASSWORD} == x ]; then
+          echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+          exit 1;
+        fi;
+        echo "Waiting for Elasticsearch availability";
+        until curl -s http://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 10; done;
+        echo "Setting kibana_system password";
+        until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "All done!";
+      '
 volumes:
   elasticsearch-data:
     driver: local

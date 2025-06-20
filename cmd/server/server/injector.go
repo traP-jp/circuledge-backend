@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/traP-jp/circuledge-backend/internal/handler"
@@ -16,9 +18,13 @@ type Server struct {
 }
 
 func Inject(db *sqlx.DB) *Server {
+	espwd, _ := os.LookupEnv("ELASTIC_PASSWORD")
 	es, err := elasticsearch.NewTypedClient(elasticsearch.Config{
 		Addresses: []string{"http://elasticsearch:9200"},
+		Username:  "elastic",
+		Password:  espwd,
 	})
+	fmt.Println(espwd)
 	if err != nil {
 		log.Fatalf("Error creating the client: %s", err)
 	}
