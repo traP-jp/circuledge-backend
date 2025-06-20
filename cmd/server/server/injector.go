@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/traP-jp/h25w_16_practice/internal/handler"
-	"github.com/traP-jp/h25w_16_practice/internal/repository"
+	"github.com/traP-jp/circuledge-backend/internal/handler"
+	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"

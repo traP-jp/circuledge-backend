@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/traP-jp/h25w_16_practice/cmd/server/server"
-	"github.com/traP-jp/h25w_16_practice/pkg/config"
-	"github.com/traP-jp/h25w_16_practice/pkg/database"
+	"github.com/traP-jp/circuledge-backend/cmd/server/server"
+	"github.com/traP-jp/circuledge-backend/pkg/config"
+	"github.com/traP-jp/circuledge-backend/pkg/database"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"

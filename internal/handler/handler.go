@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/traP-jp/h25w_16_practice/internal/repository"
+	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	"github.com/labstack/echo/v4"
 )

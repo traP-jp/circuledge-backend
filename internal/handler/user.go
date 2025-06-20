@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/traP-jp/h25w_16_practice/internal/repository"
+	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	vd "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
