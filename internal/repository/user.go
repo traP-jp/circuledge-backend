@@ -43,6 +43,7 @@ func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 		}
 		users = append(users, &user)
 	}
+
 	return users, nil
 }
 
