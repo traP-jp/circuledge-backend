@@ -1,6 +1,9 @@
 package server
 
 import (
+	"log"
+
+	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/traP-jp/circuledge-backend/internal/handler"
 	"github.com/traP-jp/circuledge-backend/internal/repository"
 
@@ -13,7 +16,14 @@ type Server struct {
 }
 
 func Inject(db *sqlx.DB) *Server {
-	repo := repository.New(db)
+	es, err := elasticsearch.NewTypedClient(elasticsearch.Config{
+		Addresses: []string{"http://elasticsearch:9200"},
+	})
+	if err != nil {
+		log.Fatalf("Error creating the client: %s", err)
+	}
+
+	repo := repository.New(db, es)
 	h := handler.New(repo)
 
 	return &Server{

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -10,12 +11,18 @@ import (
 type (
 	// users table
 	User struct {
-		ID    uuid.UUID `db:"id"`
-		Name  string    `db:"name"`
-		Email string    `db:"email"`
+		ID    uuid.UUID
+		Name  string
+		Email string
 	}
 
 	CreateUserParams struct {
+		Name  string
+		Email string
+	}
+
+	UpdateUserParams struct {
+		ID    uuid.UUID
 		Name  string
 		Email string
 	}
@@ -23,27 +30,36 @@ type (
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 	users := []*User{}
-	if err := r.db.SelectContext(ctx, &users, "SELECT * FROM users"); err != nil {
-		return nil, fmt.Errorf("select users: %w", err)
+	searchReq := r.es.Search().Index("user").Size(1000)
+	res, err := searchReq.Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("search users in ES: %w", err)
 	}
 
+	for _, hit := range res.Hits.Hits {
+		var user User
+		if err := json.Unmarshal(hit.Source_, &user); err != nil {
+			return nil, fmt.Errorf("unmarshal user data: %w", err)
+		}
+		users = append(users, &user)
+	}
 	return users, nil
 }
 
 func (r *Repository) CreateUser(ctx context.Context, params CreateUserParams) (uuid.UUID, error) {
 	userID := uuid.New()
-	if _, err := r.db.ExecContext(ctx, "INSERT INTO users (id, name, email) VALUES (?, ?, ?)", userID, params.Name, params.Email); err != nil {
-		return uuid.Nil, fmt.Errorf("insert user: %w", err)
+
+	doc := map[string]interface{}{
+		"id":    userID.String(),
+		"name":  params.Name,
+		"email": params.Email,
 	}
+
+	resp, err := r.es.Index("users").Document(doc).Id(userID.String()).Do(ctx)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("index user in ES: %w", err)
+	}
+	_ = resp
 
 	return userID, nil
-}
-
-func (r *Repository) GetUser(ctx context.Context, userID uuid.UUID) (*User, error) {
-	user := &User{}
-	if err := r.db.GetContext(ctx, user, "SELECT * FROM users WHERE id = ?", userID); err != nil {
-		return nil, fmt.Errorf("select user: %w", err)
-	}
-
-	return user, nil
 }

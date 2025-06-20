@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   app:
     build:
@@ -43,3 +41,33 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  elasticsearch:
+    container_name: "elasticsearch"
+    build:
+      context: .
+      dockerfile: ./es.Dockerfile
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - logger.deprecation.level=debug
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.0.2
+    ports:
+      - "5601:5601"
+    restart: always
+    environment:
+      - "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"
+volumes:
+  elasticsearch-data:
+    driver: local
