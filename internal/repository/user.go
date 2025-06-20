@@ -30,7 +30,7 @@ type (
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 	users := []*User{}
-	searchReq := r.es.Search().Index("user").Size(1000)
+	searchReq := r.es.Search().Index("users").Size(1000)
 	res, err := searchReq.Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("search users in ES: %w", err)
