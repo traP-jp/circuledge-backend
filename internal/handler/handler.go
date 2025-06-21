@@ -35,4 +35,9 @@ func (h *Handler) SetupRoutes(api *echo.Group) {
 	{
 		meAPI.PUT("/settings", h.UpdateSettings)
 	}
+
+	channelsAPI := api.Group("/channels")
+	{
+		channelsAPI.GET("", h.GetChannels)
+	}
 }
