@@ -85,14 +85,32 @@ func (r *Repository) CreateUser(ctx context.Context, params CreateUserParams) (u
 	return userID, nil
 }
 
-func (r *Repository) CreateNote(_ context.Context) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
+func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
 	noteID, _ := uuid.NewV7()
 	revisionID, _ := uuid.NewV7()
 	permission := "limited"
-	channelID := uuid.New()
+	channelID := uuid.New() //todo
+
+	doc := map[string]interface{}{
+		"latestRevision": revisionID.String(),
+		"channel":        channelID.String(),
+		"permission":     permission,
+		"title":          "新規ノート",
+		"summary":        "新しく作成されたノート",
+		"body":           "",
+		"tag":            []string{},
+		"createdAt":      time.Now().Unix(),
+		"updatedAt":      time.Now().Unix(),
+	}
+	log.Printf("doc: %v", doc)
+	resp, err := r.es.Index("notes").Document(doc).Id(noteID.String()).Do(ctx)
+	if err != nil {
+		return noteID, channelID, permission, revisionID, fmt.Errorf("index user in ES: %w", err)
+	}
+	_ = resp
 
 	query := `INSERT INTO notes (ID, latest_revision, created_at, deleted_at, updated_at) VALUES (?, ?, ?, ?, ?)`
-	_, err := r.db.Exec(query, noteID, revisionID, time.Now(), nil, time.Now())
+	_, err = r.db.Exec(query, noteID, revisionID, time.Now(), nil, time.Now())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
