@@ -30,6 +30,13 @@ type (
 	CreateUserResponse struct {
 		ID uuid.UUID `json:"id"`
 	}
+
+	CreateNoteResponse struct {
+		ID         uuid.UUID `json:"id"`
+		Channel    uuid.UUID `json:"channel"`
+		Permission string    `json:"permission"`
+		Revision   uuid.UUID `json:"revision"`
+	}
 )
 
 // GET /api/v1/users
@@ -77,6 +84,22 @@ func (h *Handler) CreateUser(c echo.Context) error {
 
 	res := CreateUserResponse{
 		ID: userID,
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) CreateNote(c echo.Context) error {
+
+	noteID, channelID, permission, revisionID, err := h.repo.CreateNote(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+	}
+	res := CreateNoteResponse{
+		ID:         noteID,
+		Channel:    channelID,
+		Permission: permission,
+		Revision:   revisionID,
 	}
 
 	return c.JSON(http.StatusOK, res)

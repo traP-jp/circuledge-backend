@@ -29,4 +29,9 @@ func (h *Handler) SetupRoutes(api *echo.Group) {
 		userAPI.GET("", h.GetUsers)
 		userAPI.POST("", h.CreateUser)
 	}
+
+	noteAPI := api.Group("/notes")
+	{
+		noteAPI.POST("", h.CreateNote)
+	}
 }
