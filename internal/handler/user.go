@@ -124,10 +124,10 @@ func (h *Handler) CreateNote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
 	res := CreateNoteResponse{
-		ID:         noteID,
-		Channel:    channelID,
-		Permission: permission,
-		Revision:   revisionID,
+		ID:         noteID.String(),
+		Channel:    channelID.String(),
+		Permission: permission.String(),
+		Revision:   revisionID.String(),
 	}
 
 	return c.JSON(http.StatusOK, res)
