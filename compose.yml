@@ -47,7 +47,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      elasticsearch
+      elasticsearch:
+        condition: service_started
   elasticsearch:
     container_name: "elasticsearch"
     build:
