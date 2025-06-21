@@ -26,7 +26,54 @@ type (
 		Name  string
 		Email string
 	}
+
+	Note struct {
+    ID             string    `json:"id"`
+    LatestRevision string    `json:"latest_revision"`
+    Channel        string    `json:"channel"`
+    Permission     string    `json:"permission"`
+    Title          string    `json:"title"`
+    Summary        string    `json:"summary,omitempty"`
+    Body           string    `json:"body"`
+    Tag            []string  `json:"tag"`
+    CreatedAt      string    `json:"created_at"`
+    UpdatedAt      string    `json:"updated_at"`
+	}
+
+	NoteResponse struct {
+		Revision string `json:"revision"`
+		Channel string `json:"channel"`
+		Permission string `json:"permission"`
+		Body string `json:"body"`
+	}
 )
+
+// GET /notes/:note-id
+func (r *Repository) GetNote(ctx context.Context, noteID string) (*Note, error) {
+	note := &Note{}//note構造体を初期化
+	searchReq := r.es.Search().Index("notes").Query(r.es.TermQuery("id", noteID)).Size(1)// noteIDで検索する
+	res, err := searchReq.Do(ctx) //エラスティックサーチの実行
+	if err != nil {// エラーが発生した場合はエラーメッセージを返す
+		return nil, fmt.Errorf("search note in ES: %w", err)
+	}
+
+	if res.Hits.TotalHits.Value == 0 {// 該当するノートが見つからない場合はnilを返す
+		return nil, fmt.Errorf("note not found")
+	}
+
+	if len(res.Hits.Hits) > 0 {
+		if err := json.Unmarshal(res.Hits.Hits[0].Source_, note); err != nil {
+			return nil, fmt.Errorf("unmarshal note data: %w", err)
+		}
+	}
+
+	return &NoteResponse{
+		Revision:    note.LatestRevision,
+		Channel:     note.Channel,
+		Permission:  note.Permission,
+		Body:        note.Body,
+	}, nil
+}
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 	users := []*User{}

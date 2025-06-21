@@ -1,83 +1,113 @@
-package handler
+package repository
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"net/http"
 
-	"github.com/traP-jp/circuledge-backend/internal/repository"
-
-	vd "github.com/go-ozzo/ozzo-validation"
-	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 )
 
-// スキーマ定義
 type (
-	GetUsersResponse []GetUserResponse
-
-	GetUserResponse struct {
-		ID    uuid.UUID `json:"id"`
-		Name  string    `json:"name"`
-		Email string    `json:"email"`
+	// users table
+	User struct {
+		ID    uuid.UUID
+		Name  string
+		Email string
 	}
 
-	CreateUserRequest struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
+	CreateUserParams struct {
+		Name  string
+		Email string
 	}
 
-	CreateUserResponse struct {
-		ID uuid.UUID `json:"id"`
+	UpdateUserParams struct {
+		ID    uuid.UUID
+		Name  string
+		Email string
+	}
+
+	Note struct {
+    ID             string    `json:"id"`
+    LatestRevision string    `json:"latest_revision"`
+    Channel        string    `json:"channel"`
+    Permission     string    `json:"permission"`
+    Title          string    `json:"title"`
+    Summary        string    `json:"summary,omitempty"`
+    Body           string    `json:"body"`
+    Tag            []string  `json:"tag"`
+    CreatedAt      string    `json:"created_at"`
+    UpdatedAt      string    `json:"updated_at"`
+	}
+
+	NoteResponse struct {
+		Revision string `json:"revision"`
+		Channel string `json:"channel"`
+		Permission string `json:"permission"`
+		Body string `json:"body"`
 	}
 )
 
-// GET /api/v1/users
-func (h *Handler) GetUsers(c echo.Context) error {
-	users, err := h.repo.GetUsers(c.Request().Context())
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+// GET /notes/:note-id
+func (r *Repository) GetNote(ctx context.Context, noteID string) (*Note, error) {
+	note := &Note{}//note構造体を初期化
+	searchReq := r.es.Search().Index("notes").Query(r.es.TermQuery("id", noteID)).Size(1)// noteIDで検索する
+	res, err := searchReq.Do(ctx) //エラスティックサーチの実行
+	if err != nil {// エラーが発生した場合はエラーメッセージを返す
+		return nil, fmt.Errorf("search note in ES: %w", err)
 	}
 
-	res := make(GetUsersResponse, len(users))
-	for i, user := range users {
-		res[i] = GetUserResponse{
-			ID:    user.ID,
-			Name:  user.Name,
-			Email: user.Email,
+	if res.Hits.TotalHits.Value == 0 {// 該当するノートが見つからない場合はnilを返す
+		return nil, fmt.Errorf("note not found")
+	}
+
+	if len(res.Hits.Hits) > 0 {
+		if err := json.Unmarshal(res.Hits.Hits[0].Source_, note); err != nil {
+			return nil, fmt.Errorf("unmarshal note data: %w", err)
 		}
 	}
 
-	return c.JSON(http.StatusOK, res)
+	return &NoteResponse{
+		Revision:    note.LatestRevision,
+		Channel:     note.Channel,
+		Permission:  note.Permission,
+		Body:        note.Body,
+	}, nil
 }
 
-// POST /api/v1/users
-func (h *Handler) CreateUser(c echo.Context) error {
-	req := new(CreateUserRequest)
-	if err := c.Bind(req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body").SetInternal(err)
-	}
-
-	err := vd.ValidateStruct(
-		req,
-		vd.Field(&req.Name, vd.Required),
-		vd.Field(&req.Email, vd.Required, is.Email),
-	)
+func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
+	users := []*User{}
+	searchReq := r.es.Search().Index("users").Size(1000)
+	res, err := searchReq.Do(ctx)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err)).SetInternal(err)
+		return nil, fmt.Errorf("search users in ES: %w", err)
 	}
 
-	userID, err := h.repo.CreateUser(c.Request().Context(), repository.CreateUserParams{
-		Name:  req.Name,
-		Email: req.Email,
-	})
+	for _, hit := range res.Hits.Hits {
+		var user User
+		if err := json.Unmarshal(hit.Source_, &user); err != nil {
+			return nil, fmt.Errorf("unmarshal user data: %w", err)
+		}
+		users = append(users, &user)
+	}
+
+	return users, nil
+}
+
+func (r *Repository) CreateUser(ctx context.Context, params CreateUserParams) (uuid.UUID, error) {
+	userID := uuid.New()
+
+	doc := map[string]interface{}{
+		"id":    userID.String(),
+		"name":  params.Name,
+		"email": params.Email,
+	}
+
+	resp, err := r.es.Index("users").Document(doc).Id(userID.String()).Do(ctx)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+		return uuid.Nil, fmt.Errorf("index user in ES: %w", err)
 	}
+	_ = resp
 
-	res := CreateUserResponse{
-		ID: userID,
-	}
-
-	return c.JSON(http.StatusOK, res)
+	return userID, nil
 }
