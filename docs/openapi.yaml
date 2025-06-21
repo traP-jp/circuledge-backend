@@ -312,6 +312,16 @@ components:
         tag:
           type: string
           example: "宮沢賢治"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "最終更新日時"
+          example: "2023-10-01T12:34:56Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: "作成日時"
+          example: "2023-10-01T12:00:00Z"
 
     NoteList:
       type: object
@@ -357,6 +367,16 @@ components:
           $ref: "#/components/schemas/UUID"
         permission:
           $ref: "#/components/schemas/Permission"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "最終更新日時"
+          example: "2023-10-01T12:34:56Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: "作成日時"
+          example: "2023-10-01T12:00:00Z"
         body:
           type: string
           example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
@@ -370,6 +390,11 @@ components:
           $ref: "#/components/schemas/UUID"
         permission:
           $ref: "#/components/schemas/Permission"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "更新日時"
+          example: "2023-10-01T12:34:56Z"
         body:
           type: string
           example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
