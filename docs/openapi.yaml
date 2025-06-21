@@ -136,7 +136,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NoteDetail"
+              $ref: "#/components/schemas/UpdateNote"
       responses:
         "204":
           description: 正常に更新された。
@@ -313,15 +313,13 @@ components:
           type: string
           example: "宮沢賢治"
         updatedAt:
-          type: string
-          format: date-time
+          type: integer
           description: "最終更新日時"
-          example: "2023-10-01T12:34:56Z"
+          example: 1696152896
         createdAt:
-          type: string
-          format: date-time
+          type: integer
           description: "作成日時"
-          example: "2023-10-01T12:00:00Z"
+          example: 1696152896
 
     NoteList:
       type: object
@@ -369,14 +367,30 @@ components:
           $ref: "#/components/schemas/Permission"
         updatedAt:
           type: string
-          format: date-time
+          format: integer
           description: "最終更新日時"
-          example: "2023-10-01T12:34:56Z"
+          example: 1696152896
         createdAt:
-          type: string
-          format: date-time
+          type: integer
           description: "作成日時"
-          example: "2023-10-01T12:00:00Z"
+          example: 1696152896
+        body:
+          type: string
+          example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
+    UpdateNote:
+      type: object
+      required:
+        - revision
+        - channel
+        - permission
+        - body
+      properties:
+        revision:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/UUID"
+        permission:
+          $ref: "#/components/schemas/Permission"
         body:
           type: string
           example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
@@ -391,10 +405,9 @@ components:
         permission:
           $ref: "#/components/schemas/Permission"
         updatedAt:
-          type: string
-          format: date-time
+          type: integer
           description: "更新日時"
-          example: "2023-10-01T12:34:56Z"
+          example: 1750486150
         body:
           type: string
           example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
