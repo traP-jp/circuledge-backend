@@ -98,7 +98,7 @@ func (h *Handler) CreateNote(c echo.Context) error {
 	res := CreateNoteResponce{
 		ID:         noteID,
 		Channel:    channelID,
-		Permmisson: permission,
+		Permission: permission,
 		Revision:   revisionID,
 	}
 	return c.JSON(http.StatusOK, res)
