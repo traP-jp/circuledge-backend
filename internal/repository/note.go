@@ -81,9 +81,11 @@ func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse,
 	// Elasticsearchでnoteを検索
 	res, err := r.es.Get("notes", noteID).Do(ctx) // Getメソッドを使用してドキュメントを取得
 	if err != nil {
+
 		return nil, fmt.Errorf("search note in ES: %w", err)
 	}
 	if !res.Found {
+
 		return nil, fmt.Errorf("note not found")
 	}
 	var note Note
@@ -98,6 +100,30 @@ func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse,
 		Permission: note.Permission,
 		Body:       note.Body,
 	}, nil
+}
+
+// DELETE /notes/:note-id
+func (r *Repository) DeleteNote(ctx context.Context, noteID string) error {
+	// Elasticsearchからノートを削除
+	_, err := r.es.Delete("notes", noteID).Do(ctx)
+	if err != nil {
+
+		return fmt.Errorf("delete note in ES: %w", err)
+	}
+	// SQLのdeleted_atを更新
+	query := `UPDATE notes SET deleted_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, time.Now(), noteID)
+	if err != nil {
+		if err.Error() == "note not found" {
+
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+		log.Printf("DB Error: %s", err)
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+
+	return nil
 }
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
