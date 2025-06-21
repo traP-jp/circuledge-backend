@@ -181,8 +181,8 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 		return fmt.Errorf("update note in ES: %w", err)
 	}
 
-	query := `UPDATE notes SET permission = ?, revision = ?, updated_at = ? WHERE id = ?`
-	_, err = r.db.Exec(query, params.Body, params.Permission, params.Revision.String(), time.Now(), noteID)
+	query := `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, params.Revision.String(), time.Now(), noteID)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
