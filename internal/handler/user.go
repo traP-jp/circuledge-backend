@@ -126,7 +126,7 @@ func (h *Handler) CreateNote(c echo.Context) error {
 	res := CreateNoteResponse{
 		ID:         noteID.String(),
 		Channel:    channelID.String(),
-		Permission: permission.String(),
+		Permission: permission(),
 		Revision:   revisionID.String(),
 	}
 
