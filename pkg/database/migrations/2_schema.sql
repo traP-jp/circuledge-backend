@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
 CREATE TABLE IF NOT EXISTS note_views (
     user_name VARCHAR(255) NOT NULL,
     note_id VARCHAR(36) NOT NULL,
-    viewed_at DATETIME NOT NULL,
+    viewed_at INT NOT NULL,
     PRIMARY KEY (user_name, note_id, viewed_at)
 );
 

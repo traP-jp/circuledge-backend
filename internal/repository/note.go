@@ -40,8 +40,8 @@ type (
 		Summary        string   `json:"summary"`
 		Body           string   `json:"body"`
 		Tag            []string `json:"tag"`
-		CreatedAt      int      `json:"created_at"`
-		UpdatedAt      int      `json:"updated_at"`
+		CreatedAt      int32      `json:"created_at"`
+		UpdatedAt      int32      `json:"updated_at"`
 	}
 
 	NoteResponse struct {
@@ -51,9 +51,9 @@ type (
 		Body           string    `json:"body"`
 		ID             uuid.UUID `json:"id,omitempty" db:"id"`
 		LatestRevision uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
-		CreatedAt      time.Time `json:"created_at,omitempty" db:"created_at"`
-		DeletedAt      time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
-		UpdatedAt      time.Time `json:"updated_at,omitempty" db:"updated_at"`
+		CreatedAt      int32 `json:"created_at,omitempty" db:"created_at"`
+		DeletedAt      int32 `json:"deleted_at,omitempty" db:"deleted_at"`
+		UpdatedAt      int32 `json:"updated_at,omitempty" db:"updated_at"`
 	}
 
 	UpdateNoteParams struct {
@@ -222,7 +222,7 @@ func (r *Repository) GetNoteHistory(_ context.Context, noteID string, limit int,
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, noteID)
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 
 	return histories, nil
