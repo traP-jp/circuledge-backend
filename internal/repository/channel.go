@@ -20,14 +20,10 @@ func (r *Repository) GetChannels() ([]Channel, error) {
 	fmt.Println(r.token)
 	c, _, err := client.ChannelApi.GetChannels(auth).Execute()
 	if err != nil {
-		fmt.Println("Error fetching channels:", err)
-
 		return nil, err
 	}
 	forest, err := traqforest.NewForest(client, &auth)
 	if err != nil {
-		fmt.Println("Error creating channel forest:", err)
-
 		return nil, err
 	}
 	var channels []Channel
