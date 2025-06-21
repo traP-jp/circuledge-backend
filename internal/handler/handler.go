@@ -30,4 +30,9 @@ func (h *Handler) SetupRoutes(api *echo.Group) {
 		noteAPI.POST("", h.CreateNote)
 		noteAPI.PUT("/:id", h.UpdateNote)
 	}
+
+	meAPI := api.Group("/me")
+	{
+		meAPI.PUT("/settings", h.UpdateSettings)
+	}
 }

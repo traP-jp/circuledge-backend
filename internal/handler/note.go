@@ -6,6 +6,7 @@ import (
 	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 )
 
@@ -75,8 +76,24 @@ func (h *Handler) DeleteNote(c echo.Context) error {
 }
 
 func (h *Handler) CreateNote(c echo.Context) error {
+	session, err := session.Get("session", c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get session").SetInternal(err)
+	}
+	// normalize default channel value into a uuid.UUID
+	channelUUID := uuid.Nil
+	if defaultChannel := session.Values["default_channel"]; defaultChannel != nil {
+		switch v := defaultChannel.(type) {
+		case string:
+			if parsed, err := uuid.Parse(v); err == nil {
+				channelUUID = parsed
+			}
+		case uuid.UUID:
+			channelUUID = v
+		}
+	}
 
-	noteID, channelID, permission, revisionID, err := h.repo.CreateNote(c.Request().Context())
+	noteID, channelID, permission, revisionID, err := h.repo.CreateNote(c.Request().Context(), channelUUID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
