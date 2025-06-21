@@ -26,7 +26,38 @@ type (
 		Name  string
 		Email string
 	}
+
+	Note struct {
+		ID         string `json:"id"` // Jsonでは"id"とするために`json:"id"`を指定
+		Channel    string `json:"channel"`
+		Permission string `json:"permission"`
+		Title      string `json:"title"`
+		Summary    string `json:"summary"`
+		Tag        string `json:"tag"`
+	}
 )
+
+// GET /notes/:note-id
+func (r *Repository) GetNote(ctx context.Context, noteID string) (*Note, error) {
+	note := &Note{}//note構造体を初期化
+	searchReq := r.es.Search().Index("notes").Query(r.es.TermQuery("id", noteID)).Size(1)// noteIDで検索する
+	res, err := searchReq.Do(ctx) //エラスティックサーチの実行
+	if err != nil {
+		return nil, fmt.Errorf("search note in ES: %w", err)
+	}
+
+	if res.Hits.TotalHits.Value == 0 {
+		return nil, fmt.Errorf("note not found")
+	}
+
+	if len(res.Hits.Hits) > 0 {
+		if err := json.Unmarshal(res.Hits.Hits[0].Source_, note); err != nil {
+			return nil, fmt.Errorf("unmarshal note data: %w", err)
+		}
+	}
+
+	return note, nil
+}
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 	users := []*User{}
