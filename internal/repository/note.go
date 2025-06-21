@@ -76,11 +76,12 @@ type (
 func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
 	// Elasticsearchでnoteを検索
 	res, err := r.es.Get("notes", noteID).Do(ctx) // Getメソッドを使用してドキュメントを取得
-	fmt.Println("res:", res)
 	if err != nil {
+
 		return nil, fmt.Errorf("search note in ES: %w", err)
 	}
 	if !res.Found {
+
 		return nil, fmt.Errorf("note not found")
 	}
 	var note Note
