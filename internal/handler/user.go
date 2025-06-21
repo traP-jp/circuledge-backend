@@ -31,29 +31,29 @@ type (
 		ID uuid.UUID `json:"id"`
 	}
 	CreateNoteResponse struct {
-		Revision string `json:"revision"`
-		Channel string `json:"channel"`
+		Revision   string `json:"revision"`
+		Channel    string `json:"channel"`
 		Permission string `json:"permission"`
-		Body string `json:"body"`
+		Body       string `json:"body"`
 	}
-
 )
 
 // GET /notes/:note-id
 func (h *Handler) GetNote(c echo.Context) error {
 	noteID := c.Param("note-id")
 	if noteID == "" {
+		fmt.Println("Note ID is required %s", c.Request().URL.Path)
 		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
 	}
 
 	note, err := h.repo.GetNote(c.Request().Context(), noteID)
-    if err != nil {
-        if err.Error() == "note not found" {
-            return echo.NewHTTPError(http.StatusNotFound, "note not found")
-        }
-		fmt.println("Error fetching note:", err)
-        return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
-    }
+	if err != nil {
+		if err.Error() == "note not found" {
+			fmt.Printf("Note with ID %s not found", noteID)
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+	}
 
 	res := CreateNoteResponse{
 		Revision:   note.Revision,
@@ -105,8 +105,8 @@ func (h *Handler) CreateUser(c echo.Context) error {
 		Email: req.Email,
 	})
 	if err != nil {
-        return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("invalid request body: %w", err)).SetInternal(err)
-    }
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("invalid request body: %w", err)).SetInternal(err)
+	}
 
 	res := CreateUserResponse{
 		ID: userID,

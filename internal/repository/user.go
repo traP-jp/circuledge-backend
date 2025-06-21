@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 )
 
 type (
@@ -29,23 +28,23 @@ type (
 	}
 
 	Note struct {
-    ID             string    `json:"id"`
-    LatestRevision string    `json:"latest_revision"`
-    Channel        string    `json:"channel"`
-    Permission     string    `json:"permission"`
-    Title          string    `json:"title"`
-    Summary        string    `json:"summary,omitempty"`
-    Body           string    `json:"body"`
-    Tag            []string  `json:"tag"`
-    CreatedAt      string    `json:"created_at"`
-    UpdatedAt      string    `json:"updated_at"`
+		ID             string   `json:"id"`
+		LatestRevision string   `json:"latestRevision"`
+		Channel        string   `json:"channel"`
+		Permission     string   `json:"permission"`
+		Title          string   `json:"title"`
+		Summary        string   `json:"summary"`
+		Body           string   `json:"body"`
+		Tag            []string `json:"tag"`
+		CreatedAt      string   `json:"created_at"`
+		UpdatedAt      string   `json:"updated_at"`
 	}
 
 	NoteResponse struct {
-		Revision string `json:"revision"`
-		Channel string `json:"channel"`
+		Revision   string `json:"revision"`
+		Channel    string `json:"channel"`
 		Permission string `json:"permission"`
-		Body string `json:"body"`
+		Body       string `json:"body"`
 	}
 )
 
@@ -54,33 +53,26 @@ func intPtr(i int) *int { return &i }
 // GET /notes/:note-id
 // GET /notes/:note-id
 func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
-    // Elasticsearchでnoteを検索
-    searchReq := r.es.Search().
-	Index("notes").
-	Query(&types.Query{
-		Term: map[string]types.TermQuery{
-                "id": {Value: noteID},
-            },
-	}).
-	Size(1)
+	// Elasticsearchでnoteを検索
+	res, err := r.es.Get("notes", noteID).Do(ctx) // Getメソッドを使用してドキュメントを取得
+	if err != nil {
+		return nil, fmt.Errorf("search note in ES: %w", err)
+	}
+	if res.Found == false {
+		return nil, fmt.Errorf("note not found")
+	}
+	var note Note
 
-    res, err := searchReq.Do(ctx)
-    if err != nil {
-        return nil, fmt.Errorf("search note in ES: %w", err)
-    }
-    if len(res.Hits.Hits) == 0 {
-        return nil, fmt.Errorf("note not found")
-    }
-    var note Note
-    if err := json.Unmarshal(res.Hits.Hits[0].Source_, &note); err != nil {
-        return nil, fmt.Errorf("unmarshal note data: %w", err)
-    }
-    return &NoteResponse{
-        Revision:   note.LatestRevision,
-        Channel:    note.Channel,
-        Permission: note.Permission,
-        Body:       note.Body,
-    }, nil
+	if err := json.Unmarshal(res.Source_, &note); err != nil {
+		return nil, fmt.Errorf("unmarshal note data: %w", err)
+	}
+
+	return &NoteResponse{
+		Revision:   note.LatestRevision,
+		Channel:    note.Channel,
+		Permission: note.Permission,
+		Body:       note.Body,
+	}, nil
 }
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
@@ -98,7 +90,7 @@ func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 		}
 		users = append(users, &user)
 	}
-	
+
 	return users, nil
 }
 
