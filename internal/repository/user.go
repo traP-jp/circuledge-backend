@@ -31,7 +31,7 @@ type (
 		Email string
 	}
 
-  Note struct {
+	Note struct {
 		ID             string   `json:"id"`
 		LatestRevision string   `json:"latestRevision"`
 		Channel        string   `json:"channel"`
@@ -45,10 +45,10 @@ type (
 	}
 
 	NoteResponse struct {
-		Revision   string `json:"revision"`
-		Channel    string `json:"channel"`
-		Permission string `json:"permission"`
-		Body       string `json:"body"`
+		Revision       string    `json:"revision"`
+		Channel        string    `json:"channel"`
+		Permission     string    `json:"permission"`
+		Body           string    `json:"body"`
 		ID             uuid.UUID `json:"id,omitempty" db:"id"`
 		LatestRevision uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
 		CreatedAt      time.Time `json:"created_at,omitempty" db:"created_at"`
@@ -72,7 +72,7 @@ func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse,
 	if err != nil {
 		return nil, fmt.Errorf("search note in ES: %w", err)
 	}
-	if res.Found == false {
+	if !res.Found {
 		return nil, fmt.Errorf("note not found")
 	}
 	var note Note

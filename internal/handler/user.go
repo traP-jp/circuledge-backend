@@ -44,16 +44,16 @@ type (
 func (h *Handler) GetNote(c echo.Context) error {
 	noteID := c.Param("noteId")
 	if noteID == "" {
-		fmt.Println("Note ID is required %s", c.Request().URL.Path)
 		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
 	}
 
 	note, err := h.repo.GetNote(c.Request().Context(), noteID)
 	if err != nil {
 		if err.Error() == "note not found" {
-			fmt.Printf("Note with ID %s not found", noteID)
+
 			return echo.NewHTTPError(http.StatusNotFound, "note not found")
 		}
+
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
 
