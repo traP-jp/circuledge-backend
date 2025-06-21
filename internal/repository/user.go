@@ -144,6 +144,7 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	_, err = r.db.Exec(query, params.Body, params.Permission, params.Revision.String(), time.Now(), noteID)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
+
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 
