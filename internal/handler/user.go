@@ -95,7 +95,7 @@ func (h *Handler) CreateNote(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
-	res := CreateNoteResponce{
+	res := CreateNoteResponse{
 		ID:         noteID,
 		Channel:    channelID,
 		Permission: permission,
