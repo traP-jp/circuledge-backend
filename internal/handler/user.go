@@ -34,7 +34,7 @@ type (
 	CreateNoteResponse struct {
 		ID uuid.UUID `json:"id"`
 		Channel uuid.UUID `json:"channel"`
-		Permmisson string `json:"permission"`
+		Permission string `json:"permission"`
 		Revision uuid.UUID `json:"revision"`
 	}
 )
