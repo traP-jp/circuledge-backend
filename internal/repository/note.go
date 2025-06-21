@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -215,14 +216,14 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	// SQLからdeleted_atのみ取ってくる
 	query := `SELECT deleted_at FROM notes WHERE id = ?`
 
-	var deletedAt []byte // sql.NullTimeだとなぜかエラーが出る
+	var deletedAt sql.NullTime
 	err = r.db.QueryRow(query, noteID).Scan(&deletedAt)
 
 	if err != nil {
 
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
-	if len(deletedAt) > 0 {
+	if deletedAt.Valid {
 
 		return echo.NewHTTPError(http.StatusNotFound, "note not found")
 	}
