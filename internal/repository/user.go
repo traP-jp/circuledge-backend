@@ -135,11 +135,10 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 		"updatedAt":  time.Now().Unix(),
 	}
 
-	resp, err := r.es.Update("notes", noteID.String()).Doc(doc).Do(ctx)
+	_, err := r.es.Update("notes", noteID.String()).Doc(doc).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("update note in ES: %w", err)
 	}
-	_ = resp
 
 	query := `UPDATE notes SET updated_at = ? WHERE id = ?`
 	_, err = r.db.Exec(query, time.Now(), noteID)

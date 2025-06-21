@@ -129,5 +129,6 @@ func (h *Handler) UpdateNote(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
+
 	return c.NoContent(http.StatusNoContent)
 }
