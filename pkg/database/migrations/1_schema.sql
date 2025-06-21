@@ -44,4 +44,3 @@ DROP TABLE IF EXISTS note_views;
 DROP TABLE IF EXISTS user_settings;
 DROP TABLE IF EXISTS note_revisions;
 DROP TABLE IF EXISTS notes;
-DROP TABLE IF EXISTS users;
