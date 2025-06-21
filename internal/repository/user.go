@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 )
 
 type (
@@ -27,7 +31,7 @@ type (
 		Email string
 	}
 
-	Note struct {
+  Note struct {
 		ID             string   `json:"id"`
 		LatestRevision string   `json:"latestRevision"`
 		Channel        string   `json:"channel"`
@@ -45,6 +49,19 @@ type (
 		Channel    string `json:"channel"`
 		Permission string `json:"permission"`
 		Body       string `json:"body"`
+		ID             uuid.UUID `json:"id,omitempty" db:"id"`
+		LatestRevision uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
+		CreatedAt      time.Time `json:"created_at,omitempty" db:"created_at"`
+		DeletedAt      time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+		UpdatedAt      time.Time `json:"updated_at,omitempty" db:"updated_at"`
+	}
+
+	Revision struct {
+	}
+
+	UserSetting struct {
+		UserName       string    `json:"user_name,omitempty" db:"user_name"`
+		DefaultChannel uuid.UUID `json:"default_channel,omitempty" db:"default_channel"`
 	}
 )
 
@@ -107,4 +124,39 @@ func (r *Repository) CreateUser(ctx context.Context, params CreateUserParams) (u
 	_ = resp
 
 	return userID, nil
+}
+
+func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
+	noteID, _ := uuid.NewV7()
+	revisionID, _ := uuid.NewV7()
+	permission := "limited"
+	channelID := uuid.New() //todo
+
+	doc := map[string]interface{}{
+		"latestRevision": revisionID.String(),
+		"channel":        channelID.String(),
+		"permission":     permission,
+		"title":          "新規ノート",
+		"summary":        "新しく作成されたノート",
+		"body":           "",
+		"tag":            []string{},
+		"createdAt":      time.Now().Unix(),
+		"updatedAt":      time.Now().Unix(),
+	}
+	log.Printf("doc: %v", doc)
+	resp, err := r.es.Index("notes").Document(doc).Id(noteID.String()).Do(ctx)
+	if err != nil {
+		return noteID, channelID, permission, revisionID, fmt.Errorf("index user in ES: %w", err)
+	}
+	_ = resp
+
+	query := `INSERT INTO notes (ID, latest_revision, created_at, deleted_at, updated_at) VALUES (?, ?, ?, ?, ?)`
+	_, err = r.db.Exec(query, noteID, revisionID, time.Now(), nil, time.Now())
+	if err != nil {
+		log.Printf("DB Error: %s", err)
+
+		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+
+	return noteID, channelID, permission, revisionID, nil
 }

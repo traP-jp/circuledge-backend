@@ -1,0 +1,446 @@
+openapi: 3.0.3
+info:
+  title: Circuledge API
+  description: |-
+    CirculedgeのAPI仕様
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+    description: 本番環境サーバー
+
+tags:
+  - name: Notes
+    description: ノートの検索、作成、更新、削除
+  - name: Channels
+    description: チャンネル情報の取得
+  - name: User
+    description: ユーザー固有の情報（履歴や設定）
+
+paths:
+  /notes:
+    get:
+      tags:
+        - Notes
+      summary: ノートを検索する
+      description: 指定された条件に一致するノートのリストを取得します。
+      operationId: searchNotes
+      parameters:
+        - name: channel
+          in: query
+          description: 検索対象のチャンネルUUID。
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: includeChild
+          in: query
+          description: 指定したチャンネルの子チャンネルも検索対象に含めるかどうか。
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: tag
+          in: query
+          description: タグ名で検索します（正規表現対応）。
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: title
+          in: query
+          description: タイトルで検索します（正規表現対応）。
+          required: false
+          schema:
+            type: string
+        - name: body
+          in: query
+          description: 本文で検索します（正規表現対応）。
+          required: false
+          schema:
+            type: string
+        - name: sortkey
+          in: query
+          description: ソートキーを指定します。
+          required: false
+          schema:
+            type: string
+            enum: [dateAsc, dateDesc, titleAsc, titleDesc]
+            default: dateDesc
+        - name: limit
+          in: query
+          description: 一度に取得する件数。
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          description: 取得開始位置。
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: 検索結果のノートリスト。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteList"
+    post:
+      tags:
+        - Notes
+      summary: 新しいノートを作成する
+      description: 新しいノートを作成します。リクエストボディにはノートの内容を含めます。
+      operationId: createNote
+      responses:
+        "201":
+          description: ノートが正常に作成された。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewNoteResponse"
+        "400":
+          description: 不正なリクエスト。
+
+  /notes/{noteId}:
+    parameters:
+      - name: noteId
+        in: path
+        description: 操作対象のノートID。
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Notes
+      summary: 特定のノートを取得する
+      description: 指定されたIDのノートの詳細情報を取得します。
+      operationId: getNoteById
+      responses:
+        "200":
+          description: 成功。ノートの詳細情報。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteDetail"
+    put:
+      tags:
+        - Notes
+      summary: 特定のノートを更新する
+      description: 既存のノートの内容を更新します。楽観的ロックのために`revision`が必須です。
+      operationId: updateNote
+      requestBody:
+        description: 更新するノートの情報。
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteDetail"
+      responses:
+        "204":
+          description: 正常に更新された。
+        "400":
+          description: 不正なリクエスト。
+        "404":
+          description: ノートが見つからない。
+        "409":
+          description: 競合が発生した（リビジョンが古い）。最新のリビジョンと差分情報を含む。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conflict"
+    delete:
+      tags:
+        - Notes
+      summary: 特定のノートを削除する
+      description: 指定されたIDのノートを削除します。
+      operationId: deleteNote
+      responses:
+        "204":
+          description: 正常に削除された。
+        "400":
+          description: 不正なリクエスト。
+        "403":
+          description: 権限がない。
+
+  /notes/{noteId}/history:
+    parameters:
+      - name: noteId
+        in: path
+        description: 履歴を取得するノートID。
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Notes
+      summary: 特定のノートの更新履歴を取得する
+      description: 指定されたノートの更新履歴をページネーション付きで取得します。
+      operationId: getNoteHistory
+      parameters:
+        - name: limit
+          in: query
+          description: 一度に取得する件数。
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          description: 取得開始位置。
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: 成功。ノートの更新履歴リスト。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteHistoryList"
+        "404":
+          description: ノートが見つからない。
+
+  /channels:
+    get:
+      tags:
+        - Channels
+      summary: チャンネルの一覧を取得する
+      description: 利用可能なすべてのチャンネルのリストを取得します。
+      operationId: getChannels
+      responses:
+        "200":
+          description: 成功。チャンネルのリスト。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Channel"
+
+  /me/history:
+    get:
+      tags:
+        - User
+      summary: 自分の閲覧履歴を取得する
+      description: ログインユーザーが閲覧したノートの履歴をページネーション付きで取得します。
+      operationId: getMyHistory
+      parameters:
+        - name: limit
+          in: query
+          description: 一度に取得する件数。
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          description: 取得開始位置。
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: 成功。閲覧履歴のノートリスト。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteList" # GET /notes と同じレスポンス形式
+
+  /me/settings:
+    get:
+      tags:
+        - User
+      summary: 自分の設定を取得する
+      description: ログインユーザーの設定情報を取得します。
+      operationId: getMySettings
+      responses:
+        "200":
+          description: 成功。ユーザー設定情報。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+    put:
+      tags:
+        - User
+      summary: 自分の設定を更新する
+      description: ログインユーザーの設定を更新します。
+      operationId: updateMySettings
+      requestBody:
+        description: 更新するユーザー設定。
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettings"
+      responses:
+        "204":
+          description: 正常に更新された。
+        "400":
+          description: 不正なリクエスト。
+
+components:
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      description: "UUID (Universally Unique Identifier)"
+      example: "0197882d-208b-7c5a-bf60-89eafb904106"
+
+    Permission:
+      type: string
+      description: "ノートの権限"
+      enum: [public, limited, private]
+      example: "limited"
+
+    NoteSummary:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/UUID"
+        permission:
+          $ref: "#/components/schemas/Permission"
+        title:
+          type: string
+          example: "ポラーノの広場"
+        summary:
+          type: string
+          example: "あのイーハトーヴォの..."
+        tag:
+          type: string
+          example: "宮沢賢治"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "最終更新日時"
+          example: "2023-10-01T12:34:56Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: "作成日時"
+          example: "2023-10-01T12:00:00Z"
+
+    NoteList:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: "条件に一致するノートの総数"
+          example: 2434
+        notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoteSummary"
+
+    NewNoteResponse:
+      type: object
+      required:
+        - id
+        - channel
+        - permission
+        - revision
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/UUID"
+        permission:
+          $ref: "#/components/schemas/Permission"
+        revision:
+          $ref: "#/components/schemas/UUID"
+
+    NoteDetail:
+      type: object
+      required:
+        - revision
+        - channel
+        - permission
+        - body
+      properties:
+        revision:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/UUID"
+        permission:
+          $ref: "#/components/schemas/Permission"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "最終更新日時"
+          example: "2023-10-01T12:34:56Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: "作成日時"
+          example: "2023-10-01T12:00:00Z"
+        body:
+          type: string
+          example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
+
+    NoteHistoryItem:
+      type: object
+      properties:
+        revision:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/UUID"
+        permission:
+          $ref: "#/components/schemas/Permission"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "更新日時"
+          example: "2023-10-01T12:34:56Z"
+        body:
+          type: string
+          example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
+
+    NoteHistoryList:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: "更新履歴の総数"
+          example: 5
+        notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoteHistoryItem"
+
+    Conflict:
+      type: object
+      properties:
+        latestRevision:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/UUID"
+        permission:
+          $ref: "#/components/schemas/Permission"
+        diff:
+          type: string
+          description: "Unified-Diff形式の差分"
+          example: "+ あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。\n- あのイートハーヴォのすきとおった風、冬でも底に冷たさをもつ青いそら、うつくしい林で飾られたモーオリ市、郊外のぎらぎらひかる草の波。"
+
+    Channel:
+      type: object
+      required:
+        - id
+        - path
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        path:
+          type: string
+          description: "チャンネル階層を示すパス"
+          example: "event/hackathon/25spring/16"
+
+    UserSettings:
+      type: object
+      properties:
+        defaultChannel:
+          $ref: "#/components/schemas/UUID"
