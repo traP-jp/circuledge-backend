@@ -225,6 +225,7 @@ func (r *Repository) GetNoteHistory(_ context.Context, noteID string, limit int,
 		return nil, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	if len(histories) == 0 {
+		
 		return nil, echo.NewHTTPError(http.StatusNotFound, "not found")
 	}
 	return histories, nil
