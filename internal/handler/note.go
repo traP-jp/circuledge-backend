@@ -59,7 +59,7 @@ func (h *Handler) DeleteNote(c echo.Context) error {
 	noteID := c.Param("noteId")
 	if noteID == "" {
 
-		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
+		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required") //400
 	}
 	err := h.repo.DeleteNote(c.Request().Context(), noteID)
 	if err != nil {
@@ -71,7 +71,7 @@ func (h *Handler) DeleteNote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.NoContent(http.StatusNoContent) //204
 }
 
 func (h *Handler) CreateNote(c echo.Context) error {

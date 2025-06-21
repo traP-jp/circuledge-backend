@@ -110,9 +110,7 @@ func (r *Repository) DeleteNote(ctx context.Context, noteID string) error {
 	query := `DELETE FROM notes WHERE id = ?`
 	_, err = r.db.Exec(query, noteID)
 	if err != nil {
-		log.Printf("DB Error: %s", err)
-
-		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("internal server error: %v", err))
 	}
 
 	return nil
