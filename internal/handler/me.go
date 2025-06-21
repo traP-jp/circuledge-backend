@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"fmt"
-
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -30,7 +28,6 @@ func (h *Handler) UpdateSettings(c echo.Context) error {
 	}
 	session.Values["default_channel"] = settings.DefaultChannel
 
-	fmt.Println("default channel ID:", settings.DefaultChannel)
 	if err := session.Save(c.Request(), c.Response()); err != nil {
 		return echo.NewHTTPError(500, "failed to save session").SetInternal(err)
 	}

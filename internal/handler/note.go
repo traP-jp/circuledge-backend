@@ -62,7 +62,7 @@ func (h *Handler) CreateNote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get session").SetInternal(err)
 	}
 	// normalize default channel value into a uuid.UUID
-	var channelUUID uuid.UUID = uuid.Nil
+	channelUUID := uuid.Nil
 	if defaultChannel := session.Values["default_channel"]; defaultChannel != nil {
 		switch v := defaultChannel.(type) {
 		case string:
@@ -73,7 +73,6 @@ func (h *Handler) CreateNote(c echo.Context) error {
 			channelUUID = v
 		}
 	}
-	fmt.Println("default channel ID:", channelUUID)
 
 	noteID, channelID, permission, revisionID, err := h.repo.CreateNote(c.Request().Context(), channelUUID)
 	if err != nil {
