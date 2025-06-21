@@ -326,7 +326,6 @@ components:
       properties:
         total:
           type: integer
-          format: int64
           description: "条件に一致するノートの総数"
           example: 2434
         notes:
@@ -366,8 +365,7 @@ components:
         permission:
           $ref: "#/components/schemas/Permission"
         updatedAt:
-          type: string
-          format: integer
+          type: integer
           description: "最終更新日時"
           example: 1696152896
         createdAt:
@@ -417,7 +415,6 @@ components:
       properties:
         total:
           type: integer
-          format: int64
           description: "更新履歴の総数"
           example: 5
         notes:
