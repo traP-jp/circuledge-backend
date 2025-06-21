@@ -85,7 +85,7 @@ func (r *Repository) CreateUser(ctx context.Context, params CreateUserParams) (u
 	return userID, nil
 }
 
-func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
+func (r *Repository) CreateNote(_ context.Context) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
 	noteID, _ := uuid.NewV7()
 	revisionID, _ := uuid.NewV7()
 	permission := "limited" 
