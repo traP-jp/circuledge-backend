@@ -32,6 +32,6 @@ func (h *Handler) SetupRoutes(api *echo.Group) {
 
 	noteAPI := api.Group("/notes")
 	{
-		noteAPI.GET("/:note-id", h.GetNote)
+		noteAPI.GET("/:noteId", h.GetNote)
 	}
 }

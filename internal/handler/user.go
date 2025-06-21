@@ -38,9 +38,9 @@ type (
 	}
 )
 
-// GET /notes/:note-id
+// GET /notes/:noteId
 func (h *Handler) GetNote(c echo.Context) error {
-	noteID := c.Param("note-id")
+	noteID := c.Param("noteId")
 	if noteID == "" {
 		fmt.Println("Note ID is required %s", c.Request().URL.Path)
 		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
