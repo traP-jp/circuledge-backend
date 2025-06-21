@@ -37,6 +37,13 @@ type (
 		Permission string    `json:"permission"`
 		Revision   uuid.UUID `json:"revision"`
 	}
+
+	updateNoteParams struct {
+		Channel    uuid.UUID `json:"channel"`
+		Permission string    `json:"permission"`
+		Revision   uuid.UUID `json:"revision"`
+		Body       string    `json:"body"`
+	}
 )
 
 // GET /api/v1/users
@@ -103,4 +110,25 @@ func (h *Handler) CreateNote(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, res)
+}
+func (h *Handler) UpdateNote(c echo.Context) error {
+	noteID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid note ID").SetInternal(err)
+	}
+	params := new(updateNoteParams)
+	if err := c.Bind(params); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body").SetInternal(err)
+	}
+	err = h.repo.UpdateNote(c.Request().Context(), noteID, repository.UpdateNoteParams{
+		Channel:    params.Channel,
+		Permission: params.Permission,
+		Revision:   params.Revision,
+		Body:       params.Body,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
