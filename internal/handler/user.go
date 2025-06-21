@@ -32,10 +32,10 @@ type (
 	}
 
 	CreateNoteResponse struct {
-		ID uuid.UUID `json:"id"`
-		Channel uuid.UUID `json:"channel"`
-		Permission string `json:"permission"`
-		Revision uuid.UUID `json:"revision"`
+		ID         uuid.UUID `json:"id"`
+		Channel    uuid.UUID `json:"channel"`
+		Permission string    `json:"permission"`
+		Revision   uuid.UUID `json:"revision"`
 	}
 )
 
@@ -54,6 +54,7 @@ func (h *Handler) GetUsers(c echo.Context) error {
 			Email: user.Email,
 		}
 	}
+
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -84,6 +85,7 @@ func (h *Handler) CreateUser(c echo.Context) error {
 	res := CreateUserResponse{
 		ID: userID,
 	}
+
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -99,5 +101,6 @@ func (h *Handler) CreateNote(c echo.Context) error {
 		Permission: permission,
 		Revision:   revisionID,
 	}
+
 	return c.JSON(http.StatusOK, res)
 }
