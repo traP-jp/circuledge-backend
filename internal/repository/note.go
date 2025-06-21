@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -71,6 +72,9 @@ type (
 		DefaultChannel uuid.UUID `json:"default_channel,omitempty" db:"default_channel"`
 	}
 )
+
+// Todo:Delete_at
+// Delete_atになにか時間が書かれたら削除されているとみなし，404を返すようにする
 
 // GET /notes/:note-id
 func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
@@ -175,7 +179,7 @@ func (r *Repository) CreateNote(ctx context.Context, channelID uuid.UUID) (uuid.
 		"updatedAt":      time.Now().Unix(),
 	}
 	log.Printf("doc: %v", doc)
-	resp, err := r.es.Index("notes").Document(doc).Id(noteID.String()).Do(ctx)
+	resp, err := r.es.Index("notes").Document(doc).Id(noteID.String()).Do(ctx) // Elasticsearchにインデックス登録
 	if err != nil {
 		return noteID, channelID, permission, revisionID, fmt.Errorf("index user in ES: %w", err)
 	}
@@ -191,6 +195,7 @@ func (r *Repository) CreateNote(ctx context.Context, channelID uuid.UUID) (uuid.
 
 	return noteID, channelID, permission, revisionID, nil
 }
+
 func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params UpdateNoteParams) error {
 	doc := map[string]interface{}{
 		"channel":    params.Channel.String(),
@@ -202,10 +207,26 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 
 	_, err := r.es.Update("notes", noteID.String()).Doc(doc).Do(ctx)
 	if err != nil {
+
 		return fmt.Errorf("update note in ES: %w", err)
 	}
 
-	query := `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
+	// SQLからdeleted_atのみ取ってくる
+	query := `SELECT deleted_at FROM notes WHERE id = ?`
+
+	var deletedAt sql.NullTime
+	err = r.db.QueryRow(query, noteID).Scan(&deletedAt)
+
+	if err != nil {
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+	if deletedAt.Valid {
+
+		return echo.NewHTTPError(http.StatusNotFound, "note not found")
+	}
+
+	query = `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
 	_, err = r.db.Exec(query, params.Revision.String(), time.Now(), noteID)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
