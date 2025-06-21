@@ -32,10 +32,11 @@ type (
 	}
 
 	CreateNoteResponse struct {
-		ID         uuid.UUID `json:"id"`
-		Channel    uuid.UUID `json:"channel"`
-		Permission string    `json:"permission"`
-		Revision   uuid.UUID `json:"revision"`
+		ID         string `json:"id"`
+		Channel    string `json:"channel"`
+		Permission string `json:"permission"`
+		Revision   string `json:"revision"`
+		Body       string `json:"body"`
 	}
 
 	updateNoteParams struct {
@@ -45,6 +46,33 @@ type (
 		Body       string    `json:"body"`
 	}
 )
+
+// GET /notes/:noteId
+func (h *Handler) GetNote(c echo.Context) error {
+	noteID := c.Param("noteId")
+	if noteID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
+	}
+
+	note, err := h.repo.GetNote(c.Request().Context(), noteID)
+	if err != nil {
+		if err.Error() == "note not found" {
+
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+
+		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+	}
+
+	res := CreateNoteResponse{
+		Revision:   note.Revision,
+		Channel:    note.Channel,
+		Permission: note.Permission,
+		Body:       note.Body,
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
 
 // GET /api/v1/users
 func (h *Handler) GetUsers(c echo.Context) error {
@@ -86,7 +114,7 @@ func (h *Handler) CreateUser(c echo.Context) error {
 		Email: req.Email,
 	})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("invalid request body: %w", err)).SetInternal(err)
 	}
 
 	res := CreateUserResponse{
@@ -103,10 +131,10 @@ func (h *Handler) CreateNote(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
 	res := CreateNoteResponse{
-		ID:         noteID,
-		Channel:    channelID,
+		ID:         noteID.String(),
+		Channel:    channelID.String(),
 		Permission: permission,
-		Revision:   revisionID,
+		Revision:   revisionID.String(),
 	}
 
 	return c.JSON(http.StatusOK, res)

@@ -32,6 +32,23 @@ type (
 	}
 
 	Note struct {
+		ID             string   `json:"id"`
+		LatestRevision string   `json:"latestRevision"`
+		Channel        string   `json:"channel"`
+		Permission     string   `json:"permission"`
+		Title          string   `json:"title"`
+		Summary        string   `json:"summary"`
+		Body           string   `json:"body"`
+		Tag            []string `json:"tag"`
+		CreatedAt      int      `json:"created_at"`
+		UpdatedAt      int      `json:"updated_at"`
+	}
+
+	NoteResponse struct {
+		Revision       string    `json:"revision"`
+		Channel        string    `json:"channel"`
+		Permission     string    `json:"permission"`
+		Body           string    `json:"body"`
 		ID             uuid.UUID `json:"id,omitempty" db:"id"`
 		LatestRevision uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
 		CreatedAt      time.Time `json:"created_at,omitempty" db:"created_at"`
@@ -54,6 +71,30 @@ type (
 		DefaultChannel uuid.UUID `json:"default_channel,omitempty" db:"default_channel"`
 	}
 )
+
+// GET /notes/:note-id
+func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
+	// Elasticsearchでnoteを検索
+	res, err := r.es.Get("notes", noteID).Do(ctx) // Getメソッドを使用してドキュメントを取得
+	if err != nil {
+		return nil, fmt.Errorf("search note in ES: %w", err)
+	}
+	if !res.Found {
+		return nil, fmt.Errorf("note not found")
+	}
+	var note Note
+
+	if err := json.Unmarshal(res.Source_, &note); err != nil {
+		return nil, fmt.Errorf("unmarshal note data: %w", err)
+	}
+
+	return &NoteResponse{
+		Revision:   note.LatestRevision,
+		Channel:    note.Channel,
+		Permission: note.Permission,
+		Body:       note.Body,
+	}, nil
+}
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 	users := []*User{}
