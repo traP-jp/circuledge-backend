@@ -114,6 +114,7 @@ func (r *Repository) DeleteNote(ctx context.Context, noteID string) error {
 
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
+
 	return nil
 }
 
