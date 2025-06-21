@@ -173,7 +173,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 	_ = resp
 
 	query := `INSERT INTO notes (ID, latest_revision, created_at, deleted_at, updated_at) VALUES (?, ?, ?, ?, ?)`
-	_, err = r.db.Exec(query, noteID, revisionID, time.Now(), nil, time.Now())
+	_, err = r.db.Exec(query, noteID, revisionID, time.Now().Unix(), nil, time.Now().Unix())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
@@ -197,7 +197,15 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	}
 
 	query := `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
-	_, err = r.db.Exec(query, params.Revision.String(), time.Now(), noteID)
+	_, err = r.db.Exec(query, params.Revision.String(), time.Now().Unix(), noteID)
+	if err != nil {
+		log.Printf("DB Error: %s", err)
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+
+	query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = r.db.Exec(query, noteID, params.Revision, params.Channel, params.Permission, "", "", params.Body, time.Now().Unix())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
@@ -207,13 +215,15 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	return nil
 }
 
-func (r *Repository) GetNoteHistory(ctx context.Context, noteID string, limit int, offset int) ([]GetNoteHistoryResponse, error) {
+func (r *Repository) GetNoteHistory(_ context.Context, noteID string, limit int, offset int) ([]GetNoteHistoryResponse, error) {
 	query := `SELECT revision_id, channel, permission, updated_at, body FROM note_revisions WHERE note_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?`
 	histories := []GetNoteHistoryResponse{}
 	err := r.db.Select(&histories, query, noteID, limit, offset)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
+
 		return nil, echo.NewHTTPError(http.StatusInternalServerError, noteID)
 	}
+
 	return histories, nil
 }

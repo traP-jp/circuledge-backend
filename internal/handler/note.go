@@ -111,19 +111,24 @@ func (h *Handler) GetNoteHistory(c echo.Context) error {
 	}
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
+
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid limit value")
 	}
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil || offset < 0 {
+
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid offset value")
 	}
 	histories, err := h.repo.GetNoteHistory(c.Request().Context(), noteID, limit, offset)
 	if err != nil {
 		if err.Error() == "note not found" {
+
 			return echo.NewHTTPError(http.StatusNotFound, "note not found")
 		}
+		
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
+
 	return c.JSON(http.StatusOK, GetNoteHistoryResponse{
 		Total: int64(len(histories)),
 		Notes: histories,

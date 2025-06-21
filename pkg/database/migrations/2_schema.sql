@@ -4,9 +4,9 @@
 CREATE TABLE IF NOT EXISTS notes (
     id VARCHAR(36) NOT NULL, -- UUIDv7
     latest_revision VARCHAR(36) NOT NULL, -- UUIDv7
-    created_at DATETIME NOT NULL,
-    deleted_at DATETIME DEFAULT NULL,
-    updated_at DATETIME NOT NULL,
+    created_at INT NOT NULL,
+    deleted_at INT DEFAULT NULL,
+    updated_at INT NOT NULL,
     PRIMARY KEY (id)
 );
 
