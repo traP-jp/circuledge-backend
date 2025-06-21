@@ -106,11 +106,17 @@ func (r *Repository) DeleteNote(ctx context.Context, noteID string) error {
 
 		return fmt.Errorf("delete note in ES: %w", err)
 	}
-	// DBからも削除
-	query := `DELETE FROM notes WHERE id = ?`
-	_, err = r.db.Exec(query, noteID)
+	// SQLのdeleted_atを更新
+	query := `UPDATE notes SET deleted_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, time.Now(), noteID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("internal server error: %v", err))
+		if err.Error() == "note not found" {
+
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+		log.Printf("DB Error: %s", err)
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 
 	return nil
