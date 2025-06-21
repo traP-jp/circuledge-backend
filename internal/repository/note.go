@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -197,6 +196,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 
 	return noteID, channelID, permission, revisionID, nil
 }
+
 func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params UpdateNoteParams) error {
 	doc := map[string]interface{}{
 		"channel":    params.Channel.String(),
@@ -208,24 +208,27 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 
 	_, err := r.es.Update("notes", noteID.String()).Doc(doc).Do(ctx)
 	if err != nil {
+
 		return fmt.Errorf("update note in ES: %w", err)
 	}
 
 	// SQLからdeleted_atのみ取ってくる
 	query := `SELECT deleted_at FROM notes WHERE id = ?`
-	var deletedAt sql.NullTime
+
+	var deletedAt []byte // sql.NullTimeだとなぜかエラーが出る
 	err = r.db.QueryRow(query, noteID).Scan(&deletedAt)
-	log.Printf("deletedAt: %v", deletedAt)
+
 	if err != nil {
-		log.Printf("DB Error: %+v", err)
+
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
-	if deletedAt.Valid {
+	if deletedAt != nil && len(deletedAt) > 0 {
+
 		return echo.NewHTTPError(http.StatusNotFound, "note not found")
 	}
 
-	query = `UPDATE notes SET body = ?, permission = ?, latest_revision = ?, updated_at = ? WHERE id = ?`
-	_, err = r.db.Exec(query, params.Body, params.Permission, params.Revision.String(), time.Now(), noteID)
+	query = `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, params.Revision.String(), time.Now(), noteID)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
