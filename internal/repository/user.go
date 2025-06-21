@@ -33,7 +33,7 @@ type (
 
 	Note struct {
 		ID         uuid.UUID `json:"id,omitempty" db:"id"`
-		LatestRevison uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
+		LatestRevision uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
 		CreatedAt time.Time `json:"created_at,omitempty" db:"created_at"`
 		DeletedAt time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 		UpdatedAt time.Time `json:"updated_at,omitempty" db:"updated_at"`
