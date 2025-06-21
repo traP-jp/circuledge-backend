@@ -6,10 +6,11 @@ import (
 )
 
 type Repository struct {
-	db *sqlx.DB
-	es *elasticsearch.TypedClient
+	db    *sqlx.DB
+	es    *elasticsearch.TypedClient
+	token string
 }
 
-func New(db *sqlx.DB, es *elasticsearch.TypedClient) *Repository {
-	return &Repository{db: db, es: es}
+func New(db *sqlx.DB, es *elasticsearch.TypedClient, token string) *Repository {
+	return &Repository{db: db, es: es, token: token}
 }
