@@ -76,6 +76,7 @@ type (
 func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
 	// Elasticsearchでnoteを検索
 	res, err := r.es.Get("notes", noteID).Do(ctx) // Getメソッドを使用してドキュメントを取得
+	fmt.Println("res:", res)
 	if err != nil {
 		return nil, fmt.Errorf("search note in ES: %w", err)
 	}
@@ -94,6 +95,25 @@ func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse,
 		Permission: note.Permission,
 		Body:       note.Body,
 	}, nil
+}
+
+// DELETE /notes/:note-id
+func (r *Repository) DeleteNote(ctx context.Context, noteID string) error {
+	// Elasticsearchからノートを削除
+	_, err := r.es.Delete("notes", noteID).Do(ctx)
+	if err != nil {
+
+		return fmt.Errorf("delete note in ES: %w", err)
+	}
+	// DBからも削除
+	query := `DELETE FROM notes WHERE id = ?`
+	_, err = r.db.Exec(query, noteID)
+	if err != nil {
+		log.Printf("DB Error: %s", err)
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+	return nil
 }
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
