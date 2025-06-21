@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -85,6 +86,27 @@ type (
 		UserName       string    `json:"user_name,omitempty" db:"user_name"`
 		DefaultChannel uuid.UUID `json:"default_channel,omitempty" db:"default_channel"`
 	}
+
+	GetNotesParams struct {
+		Channel    string `json:"channel"`
+		IncludeChild bool `json:"includeChild"`
+		Tags 	 []string 
+		Title      string `json:"title"`
+		Body       string `json:"body"`
+		SortKey    string `json:"sortKey"`
+		Limit      int    `json:"limit"`
+		Offset     int    `json:"offset"`
+	}
+	GetNotesResponse struct {
+		ID 		   string `json:"id,omitempty" db:"id"`
+		Channel    string    `json:"channel,omitempty" db:"channel"`
+		Permission string    `json:"permission,omitempty" db:"permission"`
+		Title      string    `json:"title,omitempty" db:"title"`
+		Summary    string    `json:"summary,omitempty" db:"summary"`
+		Tag		 []string  `json:"tag,omitempty" db:"tag"`
+		UpdatedAt  int32 `json:"updatedAt,omitempty" db:"updated_at"`
+		CreatedAt  int32 `json:"createdAt,omitempty" db:"created_at"`
+	}
 )
 
 // GET /notes/:note-id
@@ -155,6 +177,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 	channelID := uuid.New() //todo
 
 	doc := map[string]interface{}{
+		"id":             noteID.String(),
 		"latestRevision": revisionID.String(),
 		"channel":        channelID.String(),
 		"permission":     permission,
@@ -228,6 +251,112 @@ func (r *Repository) GetNoteHistory(_ context.Context, noteID string, limit int,
 
 		return nil, echo.NewHTTPError(http.StatusNotFound, "not found")
 	}
-	
+
 	return histories, nil
+}
+
+func NewTermQuery(field string, value interface{}) types.Query {
+	return types.Query{
+		Term: map[string]types.TermQuery{
+			field: {
+				Value: value,
+			},
+		},
+	}
+}
+
+func NewMatchQuery(field string, queryText string) types.Query {
+	return types.Query{
+		Match: map[string]types.MatchQuery{
+			field: {Query: queryText},
+		},
+	}
+}
+
+func NewRegexQuery(field string, pattern string) types.Query {
+	return types.Query{
+		Regexp: map[string]types.RegexpQuery{
+			field: {Value: pattern},
+		},
+	}
+}
+
+func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]GetNotesResponse, error) {
+	var mustQueries []types.Query
+	var filterQueries []types.Query
+	if params.Channel != "" {
+		filterQueries = append(filterQueries, NewTermQuery("channel.keyword", params.Channel))
+	}
+	if params.IncludeChild {
+		// チャンネルの子チャンネルを取得するためのAPIを呼び出す
+		// 認証ができない
+		req, err := http.NewRequest("GET","https://q.trap.jp/api/v3/channels/"+params.Channel, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for channel data: %w", err)
+		}
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get channel data: %w", err)
+		}	
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to get channel data: status code %d", resp.StatusCode)
+		}
+		var channelData struct {
+			ID       string   `json:"id"`
+			Children []string `json:"children"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&channelData); err != nil {
+			return nil, fmt.Errorf("failed to decode channel data: %w", err)
+		}
+		// チャンネルの子チャンネルをフィルタに追加
+		for _, childID := range channelData.Children {
+			filterQueries = append(filterQueries, NewTermQuery("channel.keyword", childID))
+		}
+	}
+	if params.Title != "" {
+		mustQueries = append(mustQueries, NewRegexQuery("title.keyword", params.Title))
+	}
+	if params.Body != "" {
+		mustQueries = append(mustQueries, NewRegexQuery("body.keyword", params.Body))
+	}
+	if len(params.Tags) > 0 {
+		for _, tag := range params.Tags {
+			filterQueries = append(filterQueries, NewRegexQuery("tag.keyword", tag))
+		}
+	}
+	query := &types.Query{
+		Bool: &types.BoolQuery{	
+			Filter: filterQueries,
+			Must:   mustQueries,
+		},
+	}
+	/* sortの処理が書けなかった
+	if params.SortKey != "" {
+		switch params.SortKey {
+		case "dateAsc":
+		case "dateDesc":
+		case "titleAsc":
+		case "titleDesc":
+		default:
+			return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
+		}
+	}
+	*/
+	res, err := r.es.Search().Index("notes").Query(query).Size(params.Limit).From(params.Offset).Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("search notes in ES: %w", err)
+	}
+
+	var notes []GetNotesResponse
+	for _, hit := range res.Hits.Hits {
+		var note GetNotesResponse
+		if err := json.Unmarshal(hit.Source_, &note); err != nil {
+			return nil, fmt.Errorf("unmarshal note data: %w", err)
+		}
+		notes = append(notes, note)
+	}
+
+	return notes, nil
 }
