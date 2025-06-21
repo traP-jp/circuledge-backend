@@ -26,6 +26,7 @@ func (h *Handler) SetupRoutes(api *echo.Group) {
 	noteAPI := api.Group("/notes")
 	{
 		noteAPI.GET("/:noteId", h.GetNote)
+		noteAPI.DELETE("/:noteId", h.DeleteNote)
 		noteAPI.POST("", h.CreateNote)
 		noteAPI.PUT("/:id", h.UpdateNote)
 	}
