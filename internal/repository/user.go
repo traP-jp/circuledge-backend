@@ -39,6 +39,13 @@ type (
 		UpdatedAt      time.Time `json:"updated_at,omitempty" db:"updated_at"`
 	}
 
+	UpdateNoteParams struct {
+		Channel    uuid.UUID `json:"channel,omitempty" db:"channel"`
+		Permission string    `json:"permission,omitempty" db:"permission"`
+		Revision   uuid.UUID `json:"revision,omitempty" db:"revision"`
+		Body       string    `json:"body,omitempty" db:"body"`
+	}
+
 	Revision struct {
 	}
 
@@ -118,4 +125,28 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 	}
 
 	return noteID, channelID, permission, revisionID, nil
+}
+func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params UpdateNoteParams) error {
+	doc := map[string]interface{}{
+		"channel":    params.Channel.String(),
+		"permission": params.Permission,
+		"revision":   params.Revision.String(),
+		"body":       params.Body,
+		"updatedAt":  time.Now().Unix(),
+	}
+
+	resp, err := r.es.Update("notes", noteID.String()).Doc(doc).Do(ctx)
+	if err != nil {
+		return fmt.Errorf("update note in ES: %w", err)
+	}
+	_ = resp
+
+	query := `UPDATE notes SET updated_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, time.Now(), noteID)
+	if err != nil {
+		log.Printf("DB Error: %s", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+
+	return nil
 }
