@@ -36,8 +36,8 @@ type (
 		Summary        string   `json:"summary"`
 		Body           string   `json:"body"`
 		Tag            []string `json:"tag"`
-		CreatedAt      string   `json:"created_at"`
-		UpdatedAt      string   `json:"updated_at"`
+		CreatedAt      int      `json:"created_at"`
+		UpdatedAt      int      `json:"updated_at"`
 	}
 
 	NoteResponse struct {
@@ -48,9 +48,6 @@ type (
 	}
 )
 
-func intPtr(i int) *int { return &i }
-
-// GET /notes/:note-id
 // GET /notes/:note-id
 func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
 	// Elasticsearchでnoteを検索
