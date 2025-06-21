@@ -222,7 +222,7 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
-	if deletedAt != nil && len(deletedAt) > 0 {
+	if len(deletedAt) > 0 {
 
 		return echo.NewHTTPError(http.StatusNotFound, "note not found")
 	}
