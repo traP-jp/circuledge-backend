@@ -15,13 +15,14 @@ CREATE TABLE IF NOT EXISTS note_revisions (
     note_id VARCHAR(36) NOT NULL, -- UUIDv7
     revision_id VARCHAR(36) NOT NULL, -- UUIDv7
     channel VARCHAR(36) NOT NULL, -- UUID
-    permission ENUM('public', 'limited', 'private') NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    permission ENUM('public', 'limited', 'editable', 'freely', 'locked', 'private') NOT NULL,
+    title TEXT NOT NULL,
     summary TEXT,
     body TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     PRIMARY KEY (revision_id),
-    INDEX idx_note_id (note_id)
+    INDEX idx_note_id (note_id),
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE -- notesが削除された場合、リビジョンも削除されるようにする
 );
 
 -- user_settingsテーブル（ユーザー設定）
