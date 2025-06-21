@@ -63,9 +63,24 @@ type (
 		Body       string    `json:"body,omitempty" db:"body"`
 	}
 
-	Revision struct {
+	NoteRevision struct {
+		NoteID     uuid.UUID `json:"note_id,omitempty" db:"note_id"`
+		RevisionID uuid.UUID `json:"revision_id,omitempty" db:"revision_id"`
+		Channnel   uuid.UUID `json:"channel,omitempty" db:"channel"`
+		Permission string    `json:"permission,omitempty" db:"permission"`
+		Title 	   string    `json:"title,omitempty" db:"title"`
+		Summary    string    `json:"summary,omitempty" db:"summary"`
+		Body       string    `json:"body,omitempty" db:"body"`
+		UpdatedAt  time.Time `json:"updated_at,omitempty" db:"updated_at"`
 	}
 
+	GetNoteHistoryResponse struct {
+		RevisionID uuid.UUID `json:"revision_id,omitempty" db:"revision_id"`
+		Channel    uuid.UUID `json:"channel,omitempty" db:"channel"`
+		Permission string    `json:"permission,omitempty" db:"permission"`
+		UpdatedAt  time.Time `json:"updated_at,omitempty" db:"updated_at"`
+		Body 	   string    `json:"body,omitempty" db:"body"`
+	}
 	UserSetting struct {
 		UserName       string    `json:"user_name,omitempty" db:"user_name"`
 		DefaultChannel uuid.UUID `json:"default_channel,omitempty" db:"default_channel"`
@@ -190,4 +205,15 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	}
 
 	return nil
+}
+
+func (r *Repository) GetNoteHistory(ctx context.Context, noteID string, limit int, offset int) ([]GetNoteHistoryResponse, error) {
+	query := `SELECT revision_id, channel, permission, updated_at, body FROM note_revisions WHERE note_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?`
+	histories := []GetNoteHistoryResponse{}
+	err := r.db.Select(&histories, query, noteID, limit, offset)
+	if err != nil {
+		log.Printf("DB Error: %s", err)
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+	return histories, nil
 }

@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-
+	"strconv"
 	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	"github.com/google/uuid"
@@ -24,6 +24,11 @@ type (
 		Permission string    `json:"permission"`
 		Revision   uuid.UUID `json:"revision"`
 		Body       string    `json:"body"`
+	}
+
+	GetNoteHistoryResponse struct {
+		Total int64  `json:"total"`
+		Notes []repository.GetNoteHistoryResponse `json:"notes"`
 	}
 )
 
@@ -89,4 +94,38 @@ func (h *Handler) UpdateNote(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *Handler) GetNoteHistory(c echo.Context) error {
+	noteID := c.Param("noteId")
+	if noteID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
+	}
+	limitStr := c.QueryParam("limit")
+	offsetStr:= c.QueryParam("offset")
+	if limitStr == "" {
+		limitStr = "100" // Default limit
+	}
+	if offsetStr == "" {
+		offsetStr = "0" // Default offset
+	}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid limit value")
+	}
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid offset value")
+	}
+	histories, err := h.repo.GetNoteHistory(c.Request().Context(), noteID, limit, offset)
+	if err != nil {
+		if err.Error() == "note not found" {
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+	}
+	return c.JSON(http.StatusOK, GetNoteHistoryResponse{
+		Total: int64(len(histories)),
+		Notes: histories,
+	})
 }
