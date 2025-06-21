@@ -32,11 +32,11 @@ type (
 	}
 
 	CreateNoteResponse struct {
-		ID         uuid.UUID `json:"id"`
-		Channel    uuid.UUID `json:"channel"`
-		Permission string    `json:"permission"`
-		Revision   uuid.UUID `json:"revision"`
-    Body       string `json:"body"`
+		ID         string `json:"id"`
+		Channel    string `json:"channel"`
+		Permission string `json:"permission"`
+		Revision   string `json:"revision"`
+		Body       string `json:"body"`
 	}
 )
 
