@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS note_revisions (
     title TEXT NOT NULL,
     summary TEXT,
     body TEXT NOT NULL,
-    updated_at DATETIME NOT NULL,
+    updated_at INT NOT NULL,
     PRIMARY KEY (revision_id),
     INDEX idx_note_id (note_id),
     FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE -- notesが削除された場合、リビジョンも削除されるようにする

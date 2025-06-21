@@ -78,7 +78,7 @@ type (
 		RevisionID uuid.UUID `json:"revision_id,omitempty" db:"revision_id"`
 		Channel    uuid.UUID `json:"channel,omitempty" db:"channel"`
 		Permission string    `json:"permission,omitempty" db:"permission"`
-		UpdatedAt  time.Time `json:"updated_at,omitempty" db:"updated_at"`
+		UpdatedAt  int32 `json:"updated_at,omitempty" db:"updated_at"`
 		Body 	   string    `json:"body,omitempty" db:"body"`
 	}
 	UserSetting struct {
@@ -213,7 +213,7 @@ func (r *Repository) GetNoteHistory(ctx context.Context, noteID string, limit in
 	err := r.db.Select(&histories, query, noteID, limit, offset)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, noteID)
 	}
 	return histories, nil
 }
