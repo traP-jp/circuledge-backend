@@ -136,7 +136,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NoteUpdate"
+              $ref: "#/components/schemas/NoteDetail"
       responses:
         "204":
           description: 正常に更新された。
@@ -344,24 +344,6 @@ components:
           $ref: "#/components/schemas/UUID"
 
     NoteDetail:
-      type: object
-      required:
-        - revision
-        - channel
-        - permission
-        - body
-      properties:
-        revision:
-          $ref: "#/components/schemas/UUID"
-        channel:
-          $ref: "#/components/schemas/UUID"
-        permission:
-          $ref: "#/components/schemas/Permission"
-        body:
-          type: string
-          example: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。"
-
-    NoteUpdate:
       type: object
       required:
         - revision
