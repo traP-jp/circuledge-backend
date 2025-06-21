@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 )
 
 type (
@@ -48,31 +49,38 @@ type (
 	}
 )
 
+func intPtr(i int) *int { return &i }
+
 // GET /notes/:note-id
-func (r *Repository) GetNote(ctx context.Context, noteID string) (*Note, error) {
-	note := &Note{}//note構造体を初期化
-	searchReq := r.es.Search().Index("notes").Query(r.es.TermQuery("id", noteID)).Size(1)// noteIDで検索する
-	res, err := searchReq.Do(ctx) //エラスティックサーチの実行
-	if err != nil {// エラーが発生した場合はエラーメッセージを返す
-		return nil, fmt.Errorf("search note in ES: %w", err)
-	}
+// GET /notes/:note-id
+func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
+    // Elasticsearchでnoteを検索
+    searchReq := r.es.Search().
+	Index("notes").
+	Query(&types.Query{
+		Term: map[string]types.TermQuery{
+                "id": {Value: noteID},
+            },
+	}).
+	Size(1)
 
-	if res.Hits.TotalHits.Value == 0 {// 該当するノートが見つからない場合はnilを返す
-		return nil, fmt.Errorf("note not found")
-	}
-
-	if len(res.Hits.Hits) > 0 {
-		if err := json.Unmarshal(res.Hits.Hits[0].Source_, note); err != nil {
-			return nil, fmt.Errorf("unmarshal note data: %w", err)
-		}
-	}
-
-	return &NoteResponse{
-		Revision:    note.LatestRevision,
-		Channel:     note.Channel,
-		Permission:  note.Permission,
-		Body:        note.Body,
-	}, nil
+    res, err := searchReq.Do(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("search note in ES: %w", err)
+    }
+    if len(res.Hits.Hits) == 0 {
+        return nil, fmt.Errorf("note not found")
+    }
+    var note Note
+    if err := json.Unmarshal(res.Hits.Hits[0].Source_, &note); err != nil {
+        return nil, fmt.Errorf("unmarshal note data: %w", err)
+    }
+    return &NoteResponse{
+        Revision:   note.LatestRevision,
+        Channel:    note.Channel,
+        Permission: note.Permission,
+        Body:       note.Body,
+    }, nil
 }
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
@@ -90,7 +98,7 @@ func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
 		}
 		users = append(users, &user)
 	}
-
+	
 	return users, nil
 }
 
