@@ -95,7 +95,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 	_, err := r.db.Exec(query, noteID, revisionID, time.Now(), nil, time.Now())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
-		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error1")
+		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	
 	return noteID, channelID, permission, revisionID, nil
