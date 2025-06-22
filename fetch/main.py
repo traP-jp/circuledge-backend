@@ -1,6 +1,7 @@
 import os
 import requests
 import uuid
+import time
 
 url = 'https://md.trap.jp/notes'
 cookie = os.environ.get("COOKIE")
@@ -26,6 +27,9 @@ else:
 # 3.bodyを含めてPUTリクエストを送信する
 
 for idx in note_idx:
+    # 安全のため1ミリ秒waitを入れる
+    time.sleep(0.001)
+
     # 1. POSTリクエストを送信し，ノートを作成
     post_url = f"http://circuledge.ramdos.net:8080/api/v1/notes"
     post_response = requests.post(post_url, headers=headers)
