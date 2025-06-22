@@ -34,3 +34,21 @@ func (h *Handler) UpdateSettings(c echo.Context) error {
 
 	return c.NoContent(204)
 }
+
+func (h *Handler) GetSettings(c echo.Context) error {
+	session, err := session.Get("session", c)
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to get session").SetInternal(err)
+	}
+
+	defaultChannel, ok := session.Values["default_channel"].(string)
+	if !ok {
+		defaultChannel = ""
+	}
+
+	res := map[string]string{
+		"defaultChannel": defaultChannel,
+	}
+
+	return c.JSON(200, res)
+}
