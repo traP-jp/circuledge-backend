@@ -24,6 +24,9 @@ type (
 		Permission string    `json:"permission"`
 		Revision   uuid.UUID `json:"revision"`
 		Body       string    `json:"body"`
+		Tags	   []string  `json:"tags"`
+		Title      string    `json:"title"`
+		Summary    string    `json:"summary"`
 	}
 
 	GetNoteHistoryResponse struct {
@@ -93,6 +96,9 @@ func (h *Handler) UpdateNote(c echo.Context) error {
 		Permission: params.Permission,
 		Revision:   params.Revision,
 		Body:       params.Body,
+		Tags:       params.Tags,
+		Title:      params.Title,
+		Summary:    params.Summary,
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)

@@ -62,6 +62,9 @@ type (
 		Permission string    `json:"permission,omitempty" db:"permission"`
 		Revision   uuid.UUID `json:"revision,omitempty" db:"revision"`
 		Body       string    `json:"body,omitempty" db:"body"`
+		Tags       []string  `json:"tags,omitempty" db:"tags"`
+		Title      string    `json:"title,omitempty" db:"title"`
+		Summary    string    `json:"summary,omitempty" db:"summary"`
 	}
 
 	NoteRevision struct {
@@ -207,7 +210,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 	_, err = r.db.Exec(query, noteID, revisionID, channelID, permission, "新規ノート", "新しく作成されたノート", "", time.Now().Unix())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
-		
+
 		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	return noteID, channelID, permission, revisionID, nil
@@ -218,6 +221,9 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 		"permission": params.Permission,
 		"revision":   params.Revision.String(),
 		"body":       params.Body,
+		"title":      params.Title,
+		"summary":    params.Summary,
+		"tag":        params.Tags,
 		"updatedAt":  time.Now().Unix(),
 	}
 
@@ -236,7 +242,7 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	}
 
 	query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = r.db.Exec(query, noteID, revisionID, params.Channel, params.Permission, "", "", params.Body, time.Now().Unix())
+	_, err = r.db.Exec(query, noteID, revisionID, params.Channel, params.Permission, params.Title, params.Summary, params.Body, time.Now().Unix())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
@@ -292,8 +298,9 @@ func NewRegexQuery(field string, pattern string) types.Query {
 func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]GetNotesResponse, error) {
 	var mustQueries []types.Query
 	var filterQueries []types.Query
+	var ShouldQueries []types.Query
 	if params.Channel != "" {
-		filterQueries = append(filterQueries, NewTermQuery("channel.keyword", params.Channel))
+		ShouldQueries = append(ShouldQueries, NewTermQuery("channel.keyword", params.Channel))
 	}
 	if params.IncludeChild {
 		// チャンネルの子チャンネルを取得するためのAPIを呼び出す
@@ -320,7 +327,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		}
 		// チャンネルの子チャンネルをフィルタに追加
 		for _, childID := range channelData.Children {
-			filterQueries = append(filterQueries, NewTermQuery("channel.keyword", childID))
+			ShouldQueries = append(ShouldQueries, NewTermQuery("channel.keyword", childID))
 		}
 	}
 	if params.Title != "" {
@@ -338,6 +345,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		Bool: &types.BoolQuery{	
 			Filter: filterQueries,
 			Must:   mustQueries,
+			Should: ShouldQueries,
 		},
 	}
 	/*
