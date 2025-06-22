@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
@@ -42,8 +43,8 @@ type (
 		Summary        string   `json:"summary"`
 		Body           string   `json:"body"`
 		Tag            []string `json:"tag"`
-		CreatedAt      int32      `json:"created_at"`
-		UpdatedAt      int32      `json:"updated_at"`
+		CreatedAt      int32    `json:"created_at"`
+		UpdatedAt      int32    `json:"updated_at"`
 	}
 
 	NoteResponse struct {
@@ -53,9 +54,9 @@ type (
 		Body           string    `json:"body"`
 		ID             uuid.UUID `json:"id,omitempty" db:"id"`
 		LatestRevision uuid.UUID `json:"latest_revision,omitempty" db:"latest_revision"`
-		CreatedAt      int32 `json:"created_at,omitempty" db:"created_at"`
-		DeletedAt      int32 `json:"deleted_at,omitempty" db:"deleted_at"`
-		UpdatedAt      int32 `json:"updated_at,omitempty" db:"updated_at"`
+		CreatedAt      int32     `json:"created_at,omitempty" db:"created_at"`
+		DeletedAt      int32     `json:"deleted_at,omitempty" db:"deleted_at"`
+		UpdatedAt      int32     `json:"updated_at,omitempty" db:"updated_at"`
 	}
 
 	UpdateNoteParams struct {
@@ -71,9 +72,9 @@ type (
 	NoteRevision struct {
 		NoteID     uuid.UUID `json:"note_id,omitempty" db:"note_id"`
 		RevisionID uuid.UUID `json:"revision_id,omitempty" db:"revision_id"`
-		Channel   uuid.UUID `json:"channel,omitempty" db:"channel"`
+		Channel    uuid.UUID `json:"channel,omitempty" db:"channel"`
 		Permission string    `json:"permission,omitempty" db:"permission"`
-		Title 	   string    `json:"title,omitempty" db:"title"`
+		Title      string    `json:"title,omitempty" db:"title"`
 		Summary    string    `json:"summary,omitempty" db:"summary"`
 		Body       string    `json:"body,omitempty" db:"body"`
 		UpdatedAt  time.Time `json:"updated_at,omitempty" db:"updated_at"`
@@ -83,8 +84,8 @@ type (
 		RevisionID uuid.UUID `json:"revision_id,omitempty" db:"revision_id"`
 		Channel    uuid.UUID `json:"channel,omitempty" db:"channel"`
 		Permission string    `json:"permission,omitempty" db:"permission"`
-		UpdatedAt  int32 `json:"updated_at,omitempty" db:"updated_at"`
-		Body 	   string    `json:"body,omitempty" db:"body"`
+		UpdatedAt  int32     `json:"updated_at,omitempty" db:"updated_at"`
+		Body       string    `json:"body,omitempty" db:"body"`
 	}
 	UserSetting struct {
 		UserName       string    `json:"user_name,omitempty" db:"user_name"`
@@ -92,24 +93,24 @@ type (
 	}
 
 	GetNotesParams struct {
-		Channel    string `json:"channel"`
-		IncludeChild bool `json:"includeChild"`
-		Tags 	 []string 
-		Title      string `json:"title"`
-		Body       string `json:"body"`
-		SortKey    string `json:"sortKey"`
-		Limit      int    `json:"limit"`
-		Offset     int    `json:"offset"`
+		Channel      string `json:"channel"`
+		IncludeChild bool   `json:"includeChild"`
+		Tags         []string
+		Title        string `json:"title"`
+		Body         string `json:"body"`
+		SortKey      string `json:"sortKey"`
+		Limit        int    `json:"limit"`
+		Offset       int    `json:"offset"`
 	}
 	GetNotesResponse struct {
-		ID 		   string `json:"id,omitempty" db:"id"`
-		Channel    string    `json:"channel,omitempty" db:"channel"`
-		Permission string    `json:"permission,omitempty" db:"permission"`
-		Title      string    `json:"title,omitempty" db:"title"`
-		Summary    string    `json:"summary,omitempty" db:"summary"`
-		Tag		 []string  `json:"tag,omitempty" db:"tag"`
-		UpdatedAt  int32 `json:"updatedAt,omitempty" db:"updated_at"`
-		CreatedAt  int32 `json:"createdAt,omitempty" db:"created_at"`
+		ID         string   `json:"id,omitempty" db:"id"`
+		Channel    string   `json:"channel,omitempty" db:"channel"`
+		Permission string   `json:"permission,omitempty" db:"permission"`
+		Title      string   `json:"title,omitempty" db:"title"`
+		Summary    string   `json:"summary,omitempty" db:"summary"`
+		Tag        []string `json:"tag,omitempty" db:"tag"`
+		UpdatedAt  int32    `json:"updatedAt,omitempty" db:"updated_at"`
+		CreatedAt  int32    `json:"createdAt,omitempty" db:"created_at"`
 	}
 )
 
@@ -246,14 +247,49 @@ func (r *Repository) CreateNote(ctx context.Context, channelID uuid.UUID) (uuid.
 }
 
 func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params UpdateNoteParams) error {
+	// titleはbodyの1行目を取得する
+	title := "新規ノート"
+	if params.Body != "" {
+		lines := strings.Split(params.Body, "\n")
+		if len(lines) > 0 {
+			title = strings.TrimSpace(lines[0])
+		}
+	}
+
+	// summaryはbodyの最初の100文字を取得する
+	summary := ""
+	if params.Body != "" {
+		runes := []rune(params.Body)
+		if len(runes) > 100 {
+			summary = string(runes[:100]) + "..." // 100文字を超える場合は省略記号を付ける
+		} else {
+			summary = params.Body // 100文字未満ならそのまま
+		}
+	}
+
+	// tagはbodyの中にある#で始まる単語を取得することとする
+	tags := []string{}
+	if params.Body != "" {
+		words := strings.Fields(params.Body)
+		for _, word := range words {
+			if strings.HasPrefix(word, "#") {
+				tag := strings.TrimPrefix(word, "#")
+				tag = strings.TrimSpace(tag)
+				if tag != "" {
+					tags = append(tags, tag)
+				}
+			}
+		}
+	}
+
 	doc := map[string]interface{}{
 		"channel":    params.Channel.String(),
 		"permission": params.Permission,
 		"revision":   params.Revision.String(),
 		"body":       params.Body,
-		"title":      params.Title,
-		"summary":    params.Summary,
-		"tag":        params.Tags,
+		"title":      title,
+		"summary":    summary,
+		"tag":        tags,
 		"updatedAt":  time.Now().Unix(),
 	}
 
@@ -270,7 +306,7 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	err = r.db.QueryRow(query, noteID).Scan(&deletedAt)
 
 	if err != nil {
-
+		log.Printf("DB Error (deleted_at select): %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	if deletedAt.Valid {
@@ -278,17 +314,17 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 		return echo.NewHTTPError(http.StatusNotFound, "note not found")
 	}
 
-	revisionID,_ := uuid.NewV7()
+	revisionID, _ := uuid.NewV7()
 	query = `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
 	_, err = r.db.Exec(query, revisionID.String(), time.Now().Unix(), noteID)
 
-  	if err != nil {
+	if err != nil {
 		log.Printf("DB Error: %s", err)
 
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
-  
-    query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+
+	query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = r.db.Exec(query, noteID, revisionID.String(), params.Channel, params.Permission, params.Title, params.Summary, params.Body, time.Now().Unix())
 
 	if err != nil {
@@ -353,7 +389,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 	if params.IncludeChild {
 		// チャンネルの子チャンネルを取得するためのAPIを呼び出す
 		// 認証ができない
-		req, err := http.NewRequest("GET","https://q.trap.jp/api/v3/channels/"+params.Channel, nil)
+		req, err := http.NewRequest("GET", "https://q.trap.jp/api/v3/channels/"+params.Channel, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request for channel data: %w", err)
 		}
@@ -361,7 +397,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get channel data: %w", err)
-		}	
+		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("failed to get channel data: status code %d", resp.StatusCode)
@@ -390,33 +426,33 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		}
 	}
 	query := &types.Query{
-		Bool: &types.BoolQuery{	
+		Bool: &types.BoolQuery{
 			Filter: filterQueries,
 			Must:   mustQueries,
 			Should: shouldQueries,
 		},
 	}
 	/*
-	sort := types.Sort{}
-	if params.SortKey != "" {
-		switch params.SortKey {
-		case "dateAsc":
-			sort = types.Sort{
-				&types.SortOptions{
-					SortOption: map[string]types.FieldSort{
-						"createdAt": {
-							Order: &sortorder.Asc,
+		sort := types.Sort{}
+		if params.SortKey != "" {
+			switch params.SortKey {
+			case "dateAsc":
+				sort = types.Sort{
+					&types.SortOptions{
+						SortOption: map[string]types.FieldSort{
+							"createdAt": {
+								Order: &sortorder.Asc,
+							},
 						},
 					},
-				},
+				}
+			case "dateDesc":
+			case "titleAsc":
+			case "titleDesc":
+			default:
+				return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
 			}
-		case "dateDesc":
-		case "titleAsc":
-		case "titleDesc":
-		default:
-			return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
 		}
-	}
 	*/
 	res, err := r.es.Search().Index("notes").Query(query).Size(params.Limit).From(params.Offset).Do(ctx)
 	if err != nil {

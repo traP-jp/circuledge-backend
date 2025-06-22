@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+
 	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	"github.com/google/uuid"
@@ -25,18 +26,18 @@ type (
 		Permission string    `json:"permission"`
 		Revision   uuid.UUID `json:"revision"`
 		Body       string    `json:"body"`
-		Tags	   []string  `json:"tags"`
+		Tags       []string  `json:"tags"`
 		Title      string    `json:"title"`
 		Summary    string    `json:"summary"`
 	}
 
 	GetNoteHistoryResponse struct {
-		Total int64  `json:"total"`
+		Total int64                               `json:"total"`
 		Notes []repository.GetNoteHistoryResponse `json:"notes"`
 	}
 
 	GetNotesResponse struct {
-		Total int64                     `json:"total"`
+		Total int64                         `json:"total"`
 		Notes []repository.GetNotesResponse `json:"notes"`
 	}
 )
@@ -128,6 +129,7 @@ func (h *Handler) UpdateNote(c echo.Context) error {
 	if err := c.Bind(params); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body").SetInternal(err)
 	}
+
 	err = h.repo.UpdateNote(c.Request().Context(), noteID, repository.UpdateNoteParams{
 		Channel:    params.Channel,
 		Permission: params.Permission,
@@ -150,7 +152,7 @@ func (h *Handler) GetNoteHistory(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required")
 	}
 	limitStr := c.QueryParam("limit")
-	offsetStr:= c.QueryParam("offset")
+	offsetStr := c.QueryParam("offset")
 	if limitStr == "" {
 		limitStr = "100" // Default limit
 	}
@@ -188,7 +190,7 @@ func (h *Handler) GetNotes(c echo.Context) error {
 	if channel == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "channel ID is required")
 	}
-		
+
 	includeChildStr := c.QueryParam("includeChild")
 	if includeChildStr != "" && includeChildStr != "true" && includeChildStr != "false" {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid includeChild value")
@@ -227,14 +229,14 @@ func (h *Handler) GetNotes(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid offset value")
 	}
 	params := repository.GetNotesParams{
-		Channel:       channel,
-		IncludeChild:  includeChild,
-		Tags:          tags,
-		Title:         title,
-		Body:          body,
-		SortKey:       sortkey,
-		Limit:         limit,
-		Offset:        offset,
+		Channel:      channel,
+		IncludeChild: includeChild,
+		Tags:         tags,
+		Title:        title,
+		Body:         body,
+		SortKey:      sortkey,
+		Limit:        limit,
+		Offset:       offset,
 	}
 	notes, err := h.repo.GetNotes(c.Request().Context(), params)
 	if err != nil {
