@@ -13,6 +13,7 @@ headers = {
 }
 
 #notesを取得し，idだけを抽出する
+note_idx = []
 response = requests.get(url, headers=headers)
 if response.status_code == 200:
     data = response.json()
@@ -46,7 +47,7 @@ for idx in note_idx:
                 note_revision = post_data.get("revision")
                 if not note_id:
                     print(f"Failed to create note for {idx}: No ID returned")
-                    break
+                    raise Exception("No ID returned from POST request")
 
                 # 2. bodyをダウンロード
                 download_url = f"https://md.trap.jp/{idx}/download"
@@ -56,7 +57,7 @@ for idx in note_idx:
                     
                 else:
                     print(f"Failed to download note {idx}: {download_response.status_code} - {download_response.text}")
-                    break
+                    raise Exception("Download failed")
                 
                 # 3. PUTリクエストを送信
                 put_url = f"http://circuledge.ramdos.net:8080/api/v1/notes/{note_id}"
@@ -76,10 +77,10 @@ for idx in note_idx:
                     break
                 else:
                     print(f"Failed to update note {idx}: {put_response.status_code} - {put_response.text}")
-                    break
+                    raise Exception("PUT request failed")
             else:
                 print(f"Failed to create note for {idx}: {post_response.status_code} - {post_response.text}")
-                break
+                raise Exception("POST request failed")
         except Exception as e:
             print(f"Error processing note {idx} (attempt {attempt}): {e}")
             if attempt < MAX_RETRIES:
