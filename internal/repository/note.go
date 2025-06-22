@@ -12,6 +12,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	traq "github.com/traPtitech/go-traq"
 )
 
 type (
@@ -351,30 +352,16 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", params.Channel))
 	}
 	if params.IncludeChild {
-		// チャンネルの子チャンネルを取得するためのAPIを呼び出す
-		// 認証ができない
-		req, err := http.NewRequest("GET","https://q.trap.jp/api/v3/channels/"+params.Channel, nil)
+		client := traq.NewAPIClient(traq.NewConfiguration())
+		auth := context.WithValue(context.Background(), traq.ContextAccessToken, r.token)
+		fmt.Println(r.token)
+		c, _, err := client.ChannelApi.GetChannel(auth, params.Channel).Execute()
 		if err != nil {
-			return nil, fmt.Errorf("failed to create request for channel data: %w", err)
+			return nil, err
 		}
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get channel data: %w", err)
-		}	
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to get channel data: status code %d", resp.StatusCode)
-		}
-		var channelData struct {
-			ID       string   `json:"id"`
-			Children []string `json:"children"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&channelData); err != nil {
-			return nil, fmt.Errorf("failed to decode channel data: %w", err)
-		}
+		
 		// チャンネルの子チャンネルをフィルタに追加
-		for _, childID := range channelData.Children {
+		for _, childID := range c.Children {
 			shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", childID))
 		}
 	}
