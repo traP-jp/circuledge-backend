@@ -12,6 +12,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	traq "github.com/traPtitech/go-traq"
 )
 
 type (
@@ -351,31 +352,31 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", params.Channel))
 	}
 	if params.IncludeChild {
-		// チャンネルの子チャンネルを取得するためのAPIを呼び出す
-		// 認証ができない
-		req, err := http.NewRequest("GET","https://q.trap.jp/api/v3/channels/"+params.Channel, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request for channel data: %w", err)
+		client := traq.NewAPIClient(traq.NewConfiguration())
+		auth := context.WithValue(context.Background(), traq.ContextAccessToken, r.token)
+		fmt.Println(r.token)
+		channels, _, err := client.ChannelApi.GetChannels(auth).Execute()
+		for err != nil {
+			return nil, fmt.Errorf("get channels from traQ: %w", err)
 		}
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get channel data: %w", err)
-		}	
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to get channel data: status code %d", resp.StatusCode)
+		m := map[string][]string{}
+		for _, c := range channels.Public {
+			m[c.Id] = c.Children
 		}
-		var channelData struct {
-			ID       string   `json:"id"`
-			Children []string `json:"children"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&channelData); err != nil {
-			return nil, fmt.Errorf("failed to decode channel data: %w", err)
-		}
-		// チャンネルの子チャンネルをフィルタに追加
-		for _, childID := range channelData.Children {
-			shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", childID))
+		queue := make([]string, 0)
+		queue = append(queue, params.Channel)
+		for count := 0; len(queue) > 0 && count < 50; count++{ //BFS
+			currentID := queue[0]
+			queue = queue[1:]
+ 			// チャンネルの子チャンネルを取得
+			children := m[currentID]
+			for _, child := range children {
+				// 子チャンネルのIDをキューに追加
+				queue = append(queue, child)
+				// 子チャンネルのIDをshouldQueriesに追加
+				shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", child,
+				))
+			}
 		}
 	}
 	if params.Title != "" {

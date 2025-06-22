@@ -28,7 +28,7 @@ paths:
         - name: channel
           in: query
           description: 検索対象のチャンネルUUID。
-          required: true
+          required: false
           schema:
             type: string
             format: uuid
