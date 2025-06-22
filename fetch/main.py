@@ -27,7 +27,7 @@ else:
 
 for idx in note_idx:
     # 1. POSTリクエストを送信し，ノートを作成
-    post_url = f"http://localhost:8080/api/v1/notes"
+    post_url = f"http://circuledge.ramdos.net:8080/api/v1/notes"
     post_response = requests.post(post_url, headers=headers)
     
     if post_response.status_code == 200:
@@ -50,7 +50,7 @@ for idx in note_idx:
             continue
         
         # 3. PUTリクエストを送信
-        put_url = f"http://localhost:8080/api/v1/notes/{note_id}"
+        put_url = f"http://circuledge.ramdos.net:8080/api/v1/notes/{note_id}"
         
         channel_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, "trap_channel"))
 
