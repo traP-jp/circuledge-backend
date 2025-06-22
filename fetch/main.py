@@ -67,4 +67,4 @@ for idx in note_idx:
         else:
             print(f"Failed to update note {idx}: {put_response.status_code} - {put_response.text}")
     else:
-        print(f"Failed to download note {idx}: {post_response.status_code} - {post_response.text}")
+        print(f"Failed to create note for {idx}: {post_response.status_code} - {post_response.text}")
