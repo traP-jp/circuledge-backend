@@ -187,9 +187,6 @@ func (h *Handler) GetNoteHistory(c echo.Context) error {
 
 func (h *Handler) GetNotes(c echo.Context) error {
 	channel := c.QueryParam("channel")
-	if channel == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "channel ID is required")
-	}
 
 	includeChildStr := c.QueryParam("includeChild")
 	if includeChildStr != "" && includeChildStr != "true" && includeChildStr != "false" {
