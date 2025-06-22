@@ -355,17 +355,21 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		client := traq.NewAPIClient(traq.NewConfiguration())
 		auth := context.WithValue(context.Background(), traq.ContextAccessToken, r.token)
 		fmt.Println(r.token)
+		channels, _, err := client.ChannelApi.GetChannels(auth).Execute()
+		for err != nil {
+			return nil, fmt.Errorf("get channels from traQ: %w", err)
+		}
+		m := map[string][]string{}
+		for _, c := range channels.Public {
+			m[c.Id] = c.Children
+		}
 		queue := make([]string, 0)
 		queue = append(queue, params.Channel)
-		for ;len(queue) > 0; { //BFS
+		for count := 0; len(queue) > 0 && count < 50; count++{ //BFS
 			currentID := queue[0]
 			queue = queue[1:]
-			// チャンネルの子チャンネルを取得
-			c, _, err := client.ChannelApi.GetChannel(auth, currentID).Execute()
-			if err != nil {
-				return nil, fmt.Errorf("get channel children: %w", err)
-			}
-			children := c.Children
+ 			// チャンネルの子チャンネルを取得
+			children := m[currentID]
 			for _, child := range children {
 				// 子チャンネルのIDをキューに追加
 				queue = append(queue, child)
