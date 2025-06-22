@@ -277,17 +277,18 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 		return echo.NewHTTPError(http.StatusNotFound, "note not found")
 	}
 
+	revisionID,_ := uuid.NewV7()
 	query = `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
-	_, err = r.db.Exec(query, params.Revision.String(), time.Now(), noteID)
+	_, err = r.db.Exec(query, revisionID.String(), time.Now().Unix(), noteID)
 
-  if err != nil {
+  	if err != nil {
 		log.Printf("DB Error: %s", err)
 
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
   
-  query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = r.db.Exec(query, noteID, revisionID, params.Channel, params.Permission, params.Title, params.Summary, params.Body, time.Now().Unix())
+    query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = r.db.Exec(query, noteID, revisionID.String(), params.Channel, params.Permission, params.Title, params.Summary, params.Body, time.Now().Unix())
 
 	if err != nil {
 		log.Printf("DB Error: %s", err)
