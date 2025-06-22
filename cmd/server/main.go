@@ -19,7 +19,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{"https://circuledge.trap.show"},
+		AllowOrigins:     []string{"http://circuledge.trap.show", "http://locahost:5173"},
 		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE, echo.OPTIONS},
 		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"*"},
