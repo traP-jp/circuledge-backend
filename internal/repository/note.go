@@ -71,7 +71,7 @@ type (
 	NoteRevision struct {
 		NoteID     uuid.UUID `json:"note_id,omitempty" db:"note_id"`
 		RevisionID uuid.UUID `json:"revision_id,omitempty" db:"revision_id"`
-		Channnel   uuid.UUID `json:"channel,omitempty" db:"channel"`
+		Channel   uuid.UUID `json:"channel,omitempty" db:"channel"`
 		Permission string    `json:"permission,omitempty" db:"permission"`
 		Title 	   string    `json:"title,omitempty" db:"title"`
 		Summary    string    `json:"summary,omitempty" db:"summary"`
@@ -241,7 +241,7 @@ func (r *Repository) CreateNote(ctx context.Context, channelID uuid.UUID) (uuid.
 
 		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
-	
+
 	return noteID, channelID, permission, revisionID, nil
 }
 
@@ -346,9 +346,9 @@ func NewRegexQuery(field string, pattern string) types.Query {
 func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]GetNotesResponse, error) {
 	var mustQueries []types.Query
 	var filterQueries []types.Query
-	var ShouldQueries []types.Query
+	var shouldQueries []types.Query
 	if params.Channel != "" {
-		ShouldQueries = append(ShouldQueries, NewTermQuery("channel.keyword", params.Channel))
+		shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", params.Channel))
 	}
 	if params.IncludeChild {
 		// チャンネルの子チャンネルを取得するためのAPIを呼び出す
@@ -375,7 +375,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		}
 		// チャンネルの子チャンネルをフィルタに追加
 		for _, childID := range channelData.Children {
-			ShouldQueries = append(ShouldQueries, NewTermQuery("channel.keyword", childID))
+			shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", childID))
 		}
 	}
 	if params.Title != "" {
@@ -393,7 +393,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		Bool: &types.BoolQuery{	
 			Filter: filterQueries,
 			Must:   mustQueries,
-			Should: ShouldQueries,
+			Should: shouldQueries,
 		},
 	}
 	/*

@@ -189,14 +189,14 @@ func (h *Handler) GetNotes(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "channel ID is required")
 	}
 		
-	inCludeChildStr := c.QueryParam("includeChild")
-	if inCludeChildStr != "" && inCludeChildStr != "true" && inCludeChildStr != "false" {
+	includeChildStr := c.QueryParam("includeChild")
+	if includeChildStr != "" && includeChildStr != "true" && includeChildStr != "false" {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid includeChild value")
 	}
-	if inCludeChildStr == "" {
-		inCludeChildStr = "false" // Default value
+	if includeChildStr == "" {
+		includeChildStr = "false" // Default value
 	}
-	includeChild, err := strconv.ParseBool(inCludeChildStr)
+	includeChild, err := strconv.ParseBool(includeChildStr)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid includeChild value").SetInternal(err)
 	}
