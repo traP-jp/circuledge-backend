@@ -241,6 +241,7 @@ func (r *Repository) CreateNote(ctx context.Context, channelID uuid.UUID) (uuid.
 
 		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
+	
 	return noteID, channelID, permission, revisionID, nil
 }
 
