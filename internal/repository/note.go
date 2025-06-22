@@ -203,6 +203,13 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 
+	query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = r.db.Exec(query, noteID, revisionID, channelID, permission, "新規ノート", "新しく作成されたノート", "", time.Now().Unix())
+	if err != nil {
+		log.Printf("DB Error: %s", err)
+		
+		return noteID, channelID, permission, revisionID, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
 	return noteID, channelID, permission, revisionID, nil
 }
 func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params UpdateNoteParams) error {
@@ -220,7 +227,8 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	}
 
 	query := `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
-	_, err = r.db.Exec(query, params.Revision.String(), time.Now().Unix(), noteID)
+	revisionID, _ := uuid.NewV7()
+	_, err = r.db.Exec(query, revisionID.String(), time.Now().Unix(), noteID)
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
@@ -228,7 +236,7 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 	}
 
 	query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err = r.db.Exec(query, noteID, params.Revision, params.Channel, params.Permission, "", "", params.Body, time.Now().Unix())
+	_, err = r.db.Exec(query, noteID, revisionID, params.Channel, params.Permission, "", "", params.Body, time.Now().Unix())
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 
@@ -332,10 +340,20 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			Must:   mustQueries,
 		},
 	}
-	/* sortの処理が書けなかった
+	/*
+	sort := types.Sort{}
 	if params.SortKey != "" {
 		switch params.SortKey {
 		case "dateAsc":
+			sort = types.Sort{
+				&types.SortOptions{
+					SortOption: map[string]types.FieldSort{
+						"createdAt": {
+							Order: &sortorder.Asc,
+						},
+					},
+				},
+			}
 		case "dateDesc":
 		case "titleAsc":
 		case "titleDesc":
