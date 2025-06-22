@@ -6,6 +6,7 @@ import (
 	"github.com/traP-jp/circuledge-backend/internal/repository"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 )
 
@@ -67,9 +68,45 @@ func (h *Handler) GetNote(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-func (h *Handler) CreateNote(c echo.Context) error {
+// DELETE /notes/:noteId
+func (h *Handler) DeleteNote(c echo.Context) error {
+	noteID := c.Param("noteId")
+	if noteID == "" {
 
-	noteID, channelID, permission, revisionID, err := h.repo.CreateNote(c.Request().Context())
+		return echo.NewHTTPError(http.StatusBadRequest, "note ID is required") //400
+	}
+	err := h.repo.DeleteNote(c.Request().Context(), noteID)
+	if err != nil {
+
+		if err.Error() == "note not found" {
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+
+		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
+	}
+
+	return c.NoContent(http.StatusNoContent) //204
+}
+
+func (h *Handler) CreateNote(c echo.Context) error {
+	session, err := session.Get("session", c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get session").SetInternal(err)
+	}
+	// normalize default channel value into a uuid.UUID
+	channelUUID := uuid.Nil
+	if defaultChannel := session.Values["default_channel"]; defaultChannel != nil {
+		switch v := defaultChannel.(type) {
+		case string:
+			if parsed, err := uuid.Parse(v); err == nil {
+				channelUUID = parsed
+			}
+		case uuid.UUID:
+			channelUUID = v
+		}
+	}
+
+	noteID, channelID, permission, revisionID, err := h.repo.CreateNote(c.Request().Context(), channelUUID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}

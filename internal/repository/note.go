@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -112,14 +113,19 @@ type (
 	}
 )
 
+// Todo:Delete_at
+// Delete_atになにか時間が書かれたら削除されているとみなし，404を返すようにする
+
 // GET /notes/:note-id
 func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse, error) {
 	// Elasticsearchでnoteを検索
 	res, err := r.es.Get("notes", noteID).Do(ctx) // Getメソッドを使用してドキュメントを取得
 	if err != nil {
+
 		return nil, fmt.Errorf("search note in ES: %w", err)
 	}
 	if !res.Found {
+
 		return nil, fmt.Errorf("note not found")
 	}
 	var note Note
@@ -134,6 +140,30 @@ func (r *Repository) GetNote(ctx context.Context, noteID string) (*NoteResponse,
 		Permission: note.Permission,
 		Body:       note.Body,
 	}, nil
+}
+
+// DELETE /notes/:note-id
+func (r *Repository) DeleteNote(ctx context.Context, noteID string) error {
+	// Elasticsearchからノートを削除
+	_, err := r.es.Delete("notes", noteID).Do(ctx)
+	if err != nil {
+
+		return fmt.Errorf("delete note in ES: %w", err)
+	}
+	// SQLのdeleted_atを更新
+	query := `UPDATE notes SET deleted_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, time.Now(), noteID)
+	if err != nil {
+		if err.Error() == "note not found" {
+
+			return echo.NewHTTPError(http.StatusNotFound, "note not found")
+		}
+		log.Printf("DB Error: %s", err)
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+
+	return nil
 }
 
 func (r *Repository) GetUsers(ctx context.Context) ([]*User, error) {
@@ -173,12 +203,10 @@ func (r *Repository) CreateUser(ctx context.Context, params CreateUserParams) (u
 	return userID, nil
 }
 
-func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
+func (r *Repository) CreateNote(ctx context.Context, channelID uuid.UUID) (uuid.UUID, uuid.UUID, string, uuid.UUID, error) {
 	noteID, _ := uuid.NewV7()
 	revisionID, _ := uuid.NewV7()
 	permission := "limited"
-	channelID := uuid.New() //todo
-
 	doc := map[string]interface{}{
 		"id":             noteID.String(),
 		"latestRevision": revisionID.String(),
@@ -192,7 +220,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 		"updatedAt":      time.Now().Unix(),
 	}
 	log.Printf("doc: %v", doc)
-	resp, err := r.es.Index("notes").Document(doc).Id(noteID.String()).Do(ctx)
+	resp, err := r.es.Index("notes").Document(doc).Id(noteID.String()).Do(ctx) // Elasticsearchにインデックス登録
 	if err != nil {
 		return noteID, channelID, permission, revisionID, fmt.Errorf("index user in ES: %w", err)
 	}
@@ -215,6 +243,7 @@ func (r *Repository) CreateNote(ctx context.Context) (uuid.UUID, uuid.UUID, stri
 	}
 	return noteID, channelID, permission, revisionID, nil
 }
+
 func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params UpdateNoteParams) error {
 	doc := map[string]interface{}{
 		"channel":    params.Channel.String(),
@@ -229,20 +258,37 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 
 	_, err := r.es.Update("notes", noteID.String()).Doc(doc).Do(ctx)
 	if err != nil {
+
 		return fmt.Errorf("update note in ES: %w", err)
 	}
 
-	query := `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
-	revisionID, _ := uuid.NewV7()
-	_, err = r.db.Exec(query, revisionID.String(), time.Now().Unix(), noteID)
+	// SQLからdeleted_atのみ取ってくる
+	query := `SELECT deleted_at FROM notes WHERE id = ?`
+
+	var deletedAt sql.NullTime
+	err = r.db.QueryRow(query, noteID).Scan(&deletedAt)
+
 	if err != nil {
+
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+	if deletedAt.Valid {
+
+		return echo.NewHTTPError(http.StatusNotFound, "note not found")
+	}
+
+	query = `UPDATE notes SET latest_revision = ?, updated_at = ? WHERE id = ?`
+	_, err = r.db.Exec(query, params.Revision.String(), time.Now(), noteID)
+
+  if err != nil {
 		log.Printf("DB Error: %s", err)
 
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
-
-	query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  
+  query = `INSERT INTO note_revisions (note_id, revision_id, channel, permission, title, summary, body, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err = r.db.Exec(query, noteID, revisionID, params.Channel, params.Permission, params.Title, params.Summary, params.Body, time.Now().Unix())
+
 	if err != nil {
 		log.Printf("DB Error: %s", err)
 

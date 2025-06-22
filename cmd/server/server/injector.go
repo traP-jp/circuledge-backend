@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -24,12 +23,13 @@ func Inject(db *sqlx.DB) *Server {
 		Username:  "elastic",
 		Password:  espwd,
 	})
-	fmt.Println(espwd)
 	if err != nil {
 		log.Fatalf("Error creating the client: %s", err)
 	}
 
-	repo := repository.New(db, es)
+	token, _ := os.LookupEnv("BOT_ACCESS_TOKEN")
+
+	repo := repository.New(db, es, token)
 	h := handler.New(repo)
 
 	return &Server{

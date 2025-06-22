@@ -13,6 +13,7 @@ services:
       DB_PORT: "3306"
       DB_NAME: app
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      BOT_ACCESS_TOKEN: ${BOT_ACCESS_TOKEN}
     depends_on:
       db:
         condition: service_healthy
