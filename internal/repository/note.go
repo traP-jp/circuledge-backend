@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elastic/go-elasticsearch/v9/typedapi/eql/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -396,29 +398,49 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			Should: shouldQueries,
 		},
 	}
-	/*
-		sort := types.Sort{}
-		if params.SortKey != "" {
-			switch params.SortKey {
-			case "dateAsc":
-				sort = types.Sort{
-					&types.SortOptions{
-						SortOption: map[string]types.FieldSort{
-							"createdAt": {
-								Order: &sortorder.Asc,
-							},
-						},
-					},
-				}
-			case "dateDesc":
-			case "titleAsc":
-			case "titleDesc":
-			default:
-				return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
+
+	sort := []types.SortCombinations{}
+	if params.SortKey != "" {
+		switch params.SortKey {
+		case "dateAsc":
+			sort = []types.SortCombinations{
+				types.SortOptions{SortOptions: map[string]types.FieldSort{
+					"created_at": {Order: &sortorder.Asc},
+				}},
 			}
+		case "dateDesc":
+			sort = []types.SortCombinations{
+				types.SortOptions{SortOptions: map[string]types.FieldSort{
+					"created_at": {Order: &sortorder.Desc},
+				}},
+			}
+		case "titleAsc":
+			sort = []types.SortCombinations{
+				types.SortOptions{SortOptions: map[string]types.FieldSort{
+					"title": {Order: &sortorder.Asc},
+				}},
+			}
+		case "titleDesc":
+			sort = []types.SortCombinations{
+				types.SortOptions{SortOptions: map[string]types.FieldSort{
+					"title": {Order: &sortorder.Desc},
+				}},
+			}
+		default:
+			return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
 		}
-	*/
-	res, err := r.es.Search().Index("notes").Query(query).Size(params.Limit).From(params.Offset).Do(ctx)
+	}
+	req := &search.Request{
+		// クエリを書く
+		Query: query,
+		// ページのスタート地点
+		From: &params.Offset,
+		// 返す数
+		Size: &params.Limit,
+		// ソート指定
+		Sort: sort,
+	}
+	res, err := r.es.Search().Index("notes").Request(req).Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("search notes in ES: %w", err)
 	}
