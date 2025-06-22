@@ -411,16 +411,17 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 				// 子チャンネルのIDをキューに追加
 				queue = append(queue, child)
 				// 子チャンネルのIDをshouldQueriesに追加
-				shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", child,
-				))
+				shouldQueries = append(shouldQueries, NewTermQuery("channel.keyword", child))
 			}
 		}
 	}
 	if params.Title != "" {
-		mustQueries = append(mustQueries, NewRegexQuery("title.keyword", params.Title))
+		shouldQueries = append(shouldQueries, NewRegexQuery("title.keyword", params.Title))
+		shouldQueries = append(shouldQueries, NewMatchQuery("title", params.Title))
 	}
 	if params.Body != "" {
-		mustQueries = append(mustQueries, NewRegexQuery("body.keyword", params.Body))
+		shouldQueries = append(shouldQueries, NewRegexQuery("body.keyword", params.Body))
+		shouldQueries = append(shouldQueries, NewMatchQuery("body", params.Body))
 	}
 	if len(params.Tags) > 0 {
 		for _, tag := range params.Tags {
