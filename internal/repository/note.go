@@ -307,6 +307,7 @@ func (r *Repository) UpdateNote(ctx context.Context, noteID uuid.UUID, params Up
 
 	if err != nil {
 		log.Printf("DB Error (deleted_at select): %v", err)
+
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	if deletedAt.Valid {
