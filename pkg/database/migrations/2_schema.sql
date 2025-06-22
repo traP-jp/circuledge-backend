@@ -4,9 +4,9 @@
 CREATE TABLE IF NOT EXISTS notes (
     id VARCHAR(36) NOT NULL, -- UUIDv7
     latest_revision VARCHAR(36) NOT NULL, -- UUIDv7
-    created_at INT NOT NULL,
-    deleted_at INT DEFAULT NULL,
-    updated_at INT NOT NULL,
+    created_at DATETIME NOT NULL,
+    deleted_at DATETIME DEFAULT NULL,
+    updated_at DATETIME NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS note_revisions (
     title TEXT NOT NULL,
     summary TEXT,
     body TEXT NOT NULL,
-    updated_at INT NOT NULL,
+    updated_at DATETIME NOT NULL,
     PRIMARY KEY (revision_id),
     INDEX idx_note_id (note_id),
     FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE -- notesが削除された場合、リビジョンも削除されるようにする
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
 CREATE TABLE IF NOT EXISTS note_views (
     user_name VARCHAR(255) NOT NULL,
     note_id VARCHAR(36) NOT NULL,
-    viewed_at INT NOT NULL,
+    viewed_at DATETIME NOT NULL,
     PRIMARY KEY (user_name, note_id, viewed_at)
 );
 
