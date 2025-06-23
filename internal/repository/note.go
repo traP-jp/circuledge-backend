@@ -457,13 +457,11 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			}
 		}
 	*/
-	countRes, err := r.es.Count().Index("notes").Query(query).Do(ctx)
+	res, err := r.es.Search().Index("notes").Query(query).TrackTotalHits(true).Size(params.Limit).From(params.Offset).Do(ctx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("count notes in ES: %w", err)
+		return nil, 0, fmt.Errorf("search notes in ES: %w", err)
 	}
-	total := countRes.Count
-	
-	res, err := r.es.Search().Index("notes").Query(query).Size(params.Limit).From(params.Offset).Do(ctx)
+	total := res.Hits.Total.Value
 	if err != nil {
 		return nil, 0, fmt.Errorf("search notes in ES: %w", err)
 	}
