@@ -382,6 +382,7 @@ func NewRegexQuery(field string, pattern string) types.Query {
 	}
 }
 
+
 type mySortCombinations struct {
 	sortCombinations types.SortCombinations
 }
@@ -389,7 +390,8 @@ type mySortCombinations struct {
 func (s *mySortCombinations) SortCombinationsCaster() *types.SortCombinations {
 	return &s.sortCombinations
 }
-func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]GetNotesResponse, error) {
+
+func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]GetNotesResponse,int64, error) {
 	var mustQueries []types.Query
 	var filterQueries []types.Query
 	var shouldQueries []types.Query
@@ -402,7 +404,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 		fmt.Println(r.token)
 		channels, _, err := client.ChannelApi.GetChannels(auth).Execute()
 		for err != nil {
-			return nil, fmt.Errorf("get channels from traQ: %w", err)
+			return nil, 0, fmt.Errorf("get channels from traQ: %w", err)
 		}
 		m := map[string][]string{}
 		for _, c := range channels.Public {
@@ -482,19 +484,27 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
 		}
 	}
-	res, err := r.es.Search().Index("notes").Query(query).Sort(sort).Size(params.Limit).From(params.Offset).Do(ctx)
+
+	countRes, err := r.es.Count().Index("notes").Query(query).Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("search notes in ES: %w", err)
+		return nil, 0, fmt.Errorf("count notes in ES: %w", err)
+	}
+	total := countRes.Count
+	
+	res, err := r.es.Search().Index("notes").Query(query).Sort(sort).Size(params.Limit).From(params.Offset).Do(ctx)
+
+	if err != nil {
+		return nil, 0, fmt.Errorf("search notes in ES: %w", err)
 	}
 
 	var notes []GetNotesResponse
 	for _, hit := range res.Hits.Hits {
 		var note GetNotesResponse
 		if err := json.Unmarshal(hit.Source_, &note); err != nil {
-			return nil, fmt.Errorf("unmarshal note data: %w", err)
+			return nil, 0, fmt.Errorf("unmarshal note data: %w", err)
 		}
 		notes = append(notes, note)
 	}
 
-	return notes, nil
+	return notes, total, nil
 }
