@@ -481,7 +481,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 				},
 			}
 		default:
-			return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
+			return nil, 0, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
 		}
 	}
 
