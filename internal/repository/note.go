@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	traq "github.com/traPtitech/go-traq"
@@ -381,6 +382,15 @@ func NewRegexQuery(field string, pattern string) types.Query {
 	}
 }
 
+
+type mySortCombinations struct {
+	sortCombinations types.SortCombinations
+}
+
+func (s *mySortCombinations) SortCombinationsCaster() *types.SortCombinations {
+	return &s.sortCombinations
+}
+
 func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]GetNotesResponse,int64, error) {
 	var mustQueries []types.Query
 	var filterQueries []types.Query
@@ -435,35 +445,54 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			Should: shouldQueries,
 		},
 	}
-	/*
-		sort := types.Sort{}
-		if params.SortKey != "" {
-			switch params.SortKey {
-			case "dateAsc":
-				sort = types.Sort{
-					&types.SortOptions{
-						SortOption: map[string]types.FieldSort{
-							"createdAt": {
-								Order: &sortorder.Asc,
-							},
-						},
+	sort := &mySortCombinations{}
+	if params.SortKey != "" {
+		switch params.SortKey {
+		case "dateAsc":
+			sort = &mySortCombinations{
+				sortCombinations: types.SortOptions{
+					SortOptions: map[string]types.FieldSort{
+						"createdAt": {Order: &sortorder.Asc,},
 					},
-				}
-			case "dateDesc":
-			case "titleAsc":
-			case "titleDesc":
-			default:
-				return nil, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
+				},
 			}
+		case "dateDesc":
+			sort = &mySortCombinations{
+				sortCombinations: types.SortOptions{
+					SortOptions: map[string]types.FieldSort{
+						"createdAt": {Order: &sortorder.Desc,},
+					},
+				},
+			}
+		case "titleAsc":
+			sort = &mySortCombinations{
+				sortCombinations: types.SortOptions{
+					SortOptions: map[string]types.FieldSort{
+						"title.keyword": {Order: &sortorder.Asc,},
+					},
+				},
+			}
+		case "titleDesc":
+			sort = &mySortCombinations{
+				sortCombinations: types.SortOptions{
+					SortOptions: map[string]types.FieldSort{
+						"title.keyword": {Order: &sortorder.Desc,},
+					},
+				},
+			}
+		default:
+			return nil, 0, fmt.Errorf("invalid sortKey value: %s", params.SortKey)
 		}
-	*/
+	}
+
 	countRes, err := r.es.Count().Index("notes").Query(query).Do(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count notes in ES: %w", err)
 	}
 	total := countRes.Count
 	
-	res, err := r.es.Search().Index("notes").Query(query).Size(params.Limit).From(params.Offset).Do(ctx)
+	res, err := r.es.Search().Index("notes").Query(query).Sort(sort).Size(params.Limit).From(params.Offset).Do(ctx)
+
 	if err != nil {
 		return nil, 0, fmt.Errorf("search notes in ES: %w", err)
 	}
