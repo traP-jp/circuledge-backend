@@ -235,13 +235,13 @@ func (h *Handler) GetNotes(c echo.Context) error {
 		Limit:        limit,
 		Offset:       offset,
 	}
-	notes, err := h.repo.GetNotes(c.Request().Context(), params)
+	notes, total, err := h.repo.GetNotes(c.Request().Context(), params)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError).SetInternal(err)
 	}
 
 	return c.JSON(http.StatusOK, GetNotesResponse{
-		Total: int64(len(notes)),
+		Total: total,
 		Notes: notes,
 	})
 }
