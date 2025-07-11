@@ -452,7 +452,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			sort = &mySortCombinations{
 				sortCombinations: types.SortOptions{
 					SortOptions: map[string]types.FieldSort{
-						"createdAt": {Order: &sortorder.Asc,},
+						"updatedAt": {Order: &sortorder.Asc,},
 					},
 				},
 			}
@@ -460,7 +460,7 @@ func (r *Repository) GetNotes(ctx context.Context, params GetNotesParams) ([]Get
 			sort = &mySortCombinations{
 				sortCombinations: types.SortOptions{
 					SortOptions: map[string]types.FieldSort{
-						"createdAt": {Order: &sortorder.Desc,},
+						"updatedAt": {Order: &sortorder.Desc,},
 					},
 				},
 			}
