@@ -11,7 +11,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/labstack/echo-contrib v0.17.4
 	github.com/labstack/echo/v4 v4.13.4
-	github.com/pressly/goose/v3 v3.25.0
+	github.com/pressly/goose/v3 v3.26.0
 	github.com/traPtitech/go-traq v0.0.0-20250411085910-749ba86cfa5b
 )
 
