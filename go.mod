@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	github.com/comavius/traq-channel-forest-go v1.0.0
-	github.com/elastic/go-elasticsearch/v9 v9.1.0
+	github.com/elastic/go-elasticsearch/v9 v9.2.1
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.4.0
@@ -17,7 +17,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/elastic/elastic-transport-go/v8 v8.7.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.8.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gorilla/context v1.1.2 // indirect
