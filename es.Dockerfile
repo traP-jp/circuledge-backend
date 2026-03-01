@@ -1,4 +1,4 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.2.4
+FROM docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.3.1
 
 RUN elasticsearch-plugin install analysis-kuromoji && \
     elasticsearch-plugin install analysis-icu
